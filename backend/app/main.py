@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.routers import chatbot
+from app.routers import chatbot, reports
 
 settings = get_settings()
 
@@ -42,6 +42,7 @@ app.add_middleware(
 # Incluir Routers
 # ============================================================
 app.include_router(chatbot.router)
+app.include_router(reports.router)
 
 
 # ============================================================
