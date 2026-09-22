@@ -29,7 +29,7 @@ describe("ChatMessage", () => {
     expect(strong.tagName).toBe("STRONG");
   });
 
-  it("convierte saltos de línea en <br />", () => {
+  it("convierte saltos de línea en <br>", () => {
     const msg: ChatMessageType = {
       id: "msg-3",
       content: "Línea 1\nLínea 2",
@@ -37,17 +37,16 @@ describe("ChatMessage", () => {
       timestamp: "2026-09-22T14:30:05",
     };
     const { container } = render(<ChatMessage message={msg} />);
-    expect(container.innerHTML).toContain("<br />");
+    expect(container.innerHTML).toContain("<br");
   });
 
-  it("renderiza avatar del asistente pero no del usuario", () => {
-    const { unmount } = render(<ChatMessage message={userMessage} />);
-    // El usuario NO tiene avatar
+  it("no renderiza avatar para el usuario", () => {
+    render(<ChatMessage message={userMessage} />);
     expect(screen.queryByText("🐟")).not.toBeInTheDocument();
-    unmount();
+  });
 
+  it("renderiza avatar del asistente", () => {
     render(<ChatMessage message={assistantMessage} />);
-    // El asistente SÍ tiene avatar
     expect(screen.getByText("🐟")).toBeInTheDocument();
   });
 });
