@@ -13,9 +13,10 @@ import pytest
 from decimal import Decimal
 from datetime import datetime
 from httpx import AsyncClient, ASGITransport
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
 
 from app.main import app
+from app.database import get_db
 from app.models.venta import Venta, VentaDetalle
 from app.services.report_service import (
     generar_comprobante_venta,
@@ -146,15 +147,11 @@ def test_ticket_rendimiento():
 
 
 # ============================================================
-# Test 5: Endpoint comprobante — HTTP 200 + PDF
+# Helper: crear mock de DB con dependency override
 # ============================================================
 
-@pytest.mark.asyncio
-async def test_endpoint_comprobante():
-    """
-    Prueba: GET /api/reports/sales/1/comprobante
-    Verifica que retorna HTTP 200 con Content-Type application/pdf.
-    """
+def _mock_venta_ejemplo():
+    """Crea un mock de Venta para pruebas de endpoints."""
     mock_venta = MagicMock(spec=Venta)
     mock_venta.id = 1
     mock_venta.numero = "VENTA-TEST-001"
@@ -173,15 +170,50 @@ async def test_endpoint_comprobante():
             subtotal=Decimal("25.00"),
         )
     ]
+    return mock_venta
 
-    with patch("app.routers.reports.get_db") as mock_get_db:
+
+def _override_db(venta):
+    """Retorna una función que simula get_db con la venta dada."""
+    def _get_db():
         mock_db = MagicMock()
-        mock_db.query.return_value.filter.return_value.first.return_value = mock_venta
-        mock_get_db.return_value = mock_db
+        mock_db.query.return_value.filter.return_value.first.return_value = venta
+        try:
+            yield mock_db
+        finally:
+            pass
+    return _get_db
 
-        transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
-            response = await client.get("/api/reports/sales/1/comprobante")
+
+def _override_db_none():
+    """Retorna una función que simula get_db sin venta (None)."""
+    def _get_db():
+        mock_db = MagicMock()
+        mock_db.query.return_value.filter.return_value.first.return_value = None
+        try:
+            yield mock_db
+        finally:
+            pass
+    return _get_db
+
+
+# ============================================================
+# Test 5: Endpoint comprobante — HTTP 200 + PDF
+# ============================================================
+
+@pytest.mark.asyncio
+async def test_endpoint_comprobante():
+    """
+    Prueba: GET /api/reports/sales/1/comprobante
+    Verifica que retorna HTTP 200 con Content-Type application/pdf.
+    """
+    app.dependency_overrides[get_db] = _override_db(_mock_venta_ejemplo())
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/reports/sales/1/comprobante")
+
+    app.dependency_overrides.clear()
 
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/pdf"
@@ -199,33 +231,13 @@ async def test_endpoint_ticket():
     Prueba: GET /api/reports/sales/1/ticket
     Verifica que retorna HTTP 200 con Content-Type application/pdf.
     """
-    mock_venta = MagicMock(spec=Venta)
-    mock_venta.id = 1
-    mock_venta.numero = "VENTA-TEST-001"
-    mock_venta.fecha = datetime(2026, 9, 22)
-    mock_venta.cliente_nombre = "Cliente Test"
-    mock_venta.cliente_documento = "12345678"
-    mock_venta.subtotal = Decimal("25.00")
-    mock_venta.igv = Decimal("4.50")
-    mock_venta.total = Decimal("29.50")
-    mock_venta.estado = "pagada"
-    mock_venta.detalles = [
-        MagicMock(
-            platillo_nombre="Ceviche Clásico",
-            cantidad=1,
-            precio_unitario=Decimal("25.00"),
-            subtotal=Decimal("25.00"),
-        )
-    ]
+    app.dependency_overrides[get_db] = _override_db(_mock_venta_ejemplo())
 
-    with patch("app.routers.reports.get_db") as mock_get_db:
-        mock_db = MagicMock()
-        mock_db.query.return_value.filter.return_value.first.return_value = mock_venta
-        mock_get_db.return_value = mock_db
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/reports/sales/1/ticket")
 
-        transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
-            response = await client.get("/api/reports/sales/1/ticket")
+    app.dependency_overrides.clear()
 
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/pdf"
@@ -243,14 +255,13 @@ async def test_endpoint_venta_no_existe():
     Prueba: GET /api/reports/sales/9999/comprobante
     Verifica que retorna HTTP 404 cuando la venta no existe.
     """
-    with patch("app.routers.reports.get_db") as mock_get_db:
-        mock_db = MagicMock()
-        mock_db.query.return_value.filter.return_value.first.return_value = None
-        mock_get_db.return_value = mock_db
+    app.dependency_overrides[get_db] = _override_db_none()
 
-        transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
-            response = await client.get("/api/reports/sales/9999/comprobante")
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/reports/sales/9999/comprobante")
+
+    app.dependency_overrides.clear()
 
     assert response.status_code == 404
     print(f"\n❌ Venta inexistente: 404 correctamente")
