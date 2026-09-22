@@ -1,47 +1,48 @@
 # ============================================================
-# Docker Compose DEV — Cevichería D'Peñas
+# Docker Compose PROD — Cevichería D'Peñas
 # ============================================================
-# Levanta backend (FastAPI) y frontend (React + Vite) en desarrollo.
-# Uso: docker-compose up --build
+# Levanta backend (FastAPI) y frontend (React/nginx) en producción.
+# Uso: docker-compose -f docker-compose.prod.yml up --build
 # ============================================================
 
 services:
-  # --- Backend FastAPI ---
+  # --- Backend FastAPI (producción) ---
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-      target: dev
-    container_name: cevicheria-backend-dev
+      target: prod
+    container_name: cevicheria-backend-prod
     ports:
       - "8000:8000"
     env_file:
       - ./backend/.env
-    volumes:
-      - ./backend:/app
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/')"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 10s
+      start_period: 15s
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
-  # --- Frontend React + Vite ---
+  # --- Frontend React/nginx (producción) ---
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      target: dev
-    container_name: cevicheria-frontend-dev
+      target: prod
+    container_name: cevicheria-frontend-prod
     ports:
-      - "5173:5173"
-    environment:
-      - VITE_API_URL=http://localhost:8000
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - "80:80"
     depends_on:
       backend:
         condition: service_healthy
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
