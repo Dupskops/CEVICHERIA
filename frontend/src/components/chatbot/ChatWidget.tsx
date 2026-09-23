@@ -4,6 +4,7 @@
  * Se muestra como un botón FAB que expande un panel de chat.
  */
 
+import { useEffect } from "react";
 import { useChatbot } from "../../hooks/useChatbot";
 import ChatHeader from "./ChatHeader";
 import ChatInput from "./ChatInput";
@@ -21,13 +22,25 @@ export default function ChatWidget() {
     messagesEndRef,
   } = useChatbot();
 
+  /** Cierra el panel con la tecla Escape (accesibilidad por teclado). */
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") toggleChat();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isOpen, toggleChat]);
+
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
       {/* ===== Panel de Chat ===== */}
       {isOpen && (
         <div
+          id="chat-panel"
           className="w-[380px] max-w-[calc(100vw-2rem)] h-[560px] max-h-[calc(100vh-6rem)] flex flex-col rounded-2xl shadow-2xl shadow-sky-500/10 border border-slate-200/60 bg-gradient-to-b from-slate-50 to-white overflow-hidden animate-slide-up"
           role="dialog"
+          aria-modal="false"
           aria-label="Chat con el asistente de la Cevichería D'Peñas"
         >
           {/* Header */}
@@ -78,6 +91,8 @@ export default function ChatWidget() {
       {/* ===== Botón FAB ===== */}
       <button
         onClick={toggleChat}
+        aria-expanded={isOpen}
+        aria-controls="chat-panel"
         className={`group w-14 h-14 rounded-full shadow-xl shadow-sky-500/25 flex items-center justify-center transition-all duration-300 hover:scale-110 hover:shadow-2xl hover:shadow-sky-500/30 active:scale-95 ${
           isOpen
             ? "bg-slate-600 rotate-0"
