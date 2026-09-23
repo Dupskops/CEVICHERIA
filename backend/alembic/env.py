@@ -14,6 +14,7 @@ from app.database import Base
 
 # Import all models so Alembic can detect them
 from app.models.venta import Venta, VentaDetalle  # noqa: F401
+from app.models.reserva import Mesa, Reserva  # noqa: F401
 
 # Alembic Config object
 config = context.config

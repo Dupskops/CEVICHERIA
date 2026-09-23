@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.routers import chatbot, reports
+from app.routers import chatbot, reports, reservas
 
 settings = get_settings()
 
@@ -21,7 +21,7 @@ app = FastAPI(
     version=settings.APP_VERSION,
     description=(
         "API REST del sistema de gestión administrativa de la Cevichería D'Peñas. "
-        "Incluye el módulo de Chatbot con Google Gemini para asistencia al cliente."
+        "Incluye los módulos de Reservas, Reportes y Chatbot con Google Gemini."
     ),
     docs_url="/docs",
     redoc_url="/redoc",
@@ -43,6 +43,7 @@ app.add_middleware(
 # ============================================================
 app.include_router(chatbot.router)
 app.include_router(reports.router)
+app.include_router(reservas.router)
 
 
 # ============================================================
