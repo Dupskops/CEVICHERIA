@@ -1,32 +1,33 @@
-"""
-Alembic environment configuration for Cevichería D'Peñas.
-Loads database URL from app.config.Settings and imports all models
-for autogenerate support.
-"""
-
+import os
+import sys
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import engine_from_config
+from sqlalchemy import pool
 
 from alembic import context
+
+# Esto ayuda a que Alembic encuentre la carpeta 'app'
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
 from app.config import get_settings
 from app.database import Base
 
-# Import all models so Alembic can detect them
-from app.models.venta import Venta, VentaDetalle  # noqa: F401
+# Importar TODOS los modelos desde tu archivo unificado
+from app.models.models import Usuario, Reserva, Platillo, Venta, DetalleVenta
 
-# Alembic Config object
+# Configuración de Alembic
 config = context.config
 
-# Set sqlalchemy.url from our Settings
+# Cargar la URL de la BD desde la configuración centralizada (protegida por .env)
 settings = get_settings()
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
-# Logging
+# Configuración de logs
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Target metadata for autogenerate
+# Metadatos para que Alembic detecte los cambios
 target_metadata = Base.metadata
 
 
@@ -39,6 +40,7 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
     )
+
     with context.begin_transaction():
         context.run_migrations()
 
@@ -50,11 +52,13 @@ def run_migrations_online() -> None:
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
+
     with connectable.connect() as connection:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
         )
+
         with context.begin_transaction():
             context.run_migrations()
 
