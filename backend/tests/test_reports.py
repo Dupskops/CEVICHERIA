@@ -17,7 +17,7 @@ from unittest.mock import MagicMock
 from app.main import app
 from app.database import get_db
 from app.models.models import Venta, DetalleVenta
-from app.routers.usuarios import get_current_user  # Importación de la dependencia de seguridad
+from app.services.auth import oauth2_scheme
 
 from app.services.report_service import (
     generar_comprobante_venta,
@@ -211,9 +211,9 @@ def _override_db_none():
     return _get_db
 
 
-def _override_get_current_user():
-    """Simula un usuario logueado con token válido para pruebas protegidas."""
-    return {"idUsuario": 1, "usuario": "admin_test", "rol": "admin"}
+def _override_oauth2_scheme():
+    """Simula la presencia de un token Bearer en las cabeceras."""
+    return "token_simulado_valido"
 
 
 # ============================================================
@@ -227,7 +227,7 @@ async def test_endpoint_comprobante():
     Verifica que retorna HTTP 200 con Content-Type application/pdf.
     """
     app.dependency_overrides[get_db] = _override_db(_mock_venta_ejemplo())
-    app.dependency_overrides[get_current_user] = _override_get_current_user  # Inyección JWT
+    app.dependency_overrides[oauth2_scheme] = _override_oauth2_scheme
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -252,7 +252,7 @@ async def test_endpoint_ticket():
     Verifica que retorna HTTP 200 con Content-Type application/pdf.
     """
     app.dependency_overrides[get_db] = _override_db(_mock_venta_ejemplo())
-    app.dependency_overrides[get_current_user] = _override_get_current_user  # Inyección JWT
+    app.dependency_overrides[oauth2_scheme] = _override_oauth2_scheme
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -277,7 +277,7 @@ async def test_endpoint_venta_no_existe():
     Verifica que retorna HTTP 404 cuando la venta no existe.
     """
     app.dependency_overrides[get_db] = _override_db_none()
-    app.dependency_overrides[get_current_user] = _override_get_current_user  # Inyección JWT
+    app.dependency_overrides[oauth2_scheme] = _override_oauth2_scheme
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
