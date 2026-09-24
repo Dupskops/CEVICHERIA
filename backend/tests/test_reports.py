@@ -8,7 +8,6 @@ Ejecutar con: pytest tests/test_reports.py -v
 """
 
 import time
-
 import pytest
 from decimal import Decimal
 from datetime import datetime
@@ -17,12 +16,12 @@ from unittest.mock import MagicMock
 
 from app.main import app
 from app.database import get_db
-from app.models.venta import Venta, VentaDetalle
+# CORRECCIÓN 1: Importación de los modelos consolidados
+from app.models.models import Venta, DetalleVenta
 from app.services.report_service import (
     generar_comprobante_venta,
     generar_ticket_comanda,
 )
-
 
 # ============================================================
 # Fixtures
@@ -34,29 +33,39 @@ class FakeVenta:
     def __init__(self):
         self.id = 1
         self.numero = "VENTA-20260922-001"
-        self.fecha = datetime(2026, 9, 22, 14, 30)
+        
+        # CORRECCIÓN 2: Separar fecha y hora para coincidir con la BD
+        self.fecha = datetime(2026, 9, 22).date()
+        self.hora = datetime(2026, 9, 22, 14, 30).time()
+        
         self.cliente_nombre = "Carlos Méndez"
-        self.cliente_documento = "45123678"
+        self.rucDni = "45123678"  # CORRECCIÓN 3: Ajuste de nombre de variable
         self.subtotal = Decimal("68.00")
         self.igv = Decimal("12.24")
         self.total = Decimal("80.24")
         self.estado = "pagada"
         self.observaciones = None
+        
+        # CORRECCIÓN 4: Simular la relación del Platillo para el nombre
+        p1 = MagicMock(); p1.nombre = "Ceviche Clásico"
+        p2 = MagicMock(); p2.nombre = "Leche de Tigre"
+        p3 = MagicMock(); p3.nombre = "Chicharrón de Pescado"
+
         self.detalles = [
             MagicMock(
-                platillo_nombre="Ceviche Clásico",
+                platillo=p1,
                 cantidad=2,
                 precio_unitario=Decimal("25.00"),
                 subtotal=Decimal("50.00"),
             ),
             MagicMock(
-                platillo_nombre="Leche de Tigre",
+                platillo=p2,
                 cantidad=1,
                 precio_unitario=Decimal("15.00"),
                 subtotal=Decimal("15.00"),
             ),
             MagicMock(
-                platillo_nombre="Chicharrón de Pescado",
+                platillo=p3,
                 cantidad=1,
                 precio_unitario=Decimal("3.00"),
                 subtotal=Decimal("3.00"),
@@ -155,16 +164,23 @@ def _mock_venta_ejemplo():
     mock_venta = MagicMock(spec=Venta)
     mock_venta.id = 1
     mock_venta.numero = "VENTA-TEST-001"
-    mock_venta.fecha = datetime(2026, 9, 22)
+    
+    mock_venta.fecha = datetime(2026, 9, 22).date()
+    mock_venta.hora = datetime(2026, 9, 22, 14, 30).time()
+    
     mock_venta.cliente_nombre = "Cliente Test"
-    mock_venta.cliente_documento = "12345678"
+    mock_venta.rucDni = "12345678"
     mock_venta.subtotal = Decimal("25.00")
     mock_venta.igv = Decimal("4.50")
     mock_venta.total = Decimal("29.50")
     mock_venta.estado = "pagada"
+    
+    mock_platillo = MagicMock()
+    mock_platillo.nombre = "Ceviche Clásico"
+    
     mock_venta.detalles = [
         MagicMock(
-            platillo_nombre="Ceviche Clásico",
+            platillo=mock_platillo,
             cantidad=1,
             precio_unitario=Decimal("25.00"),
             subtotal=Decimal("25.00"),
@@ -278,7 +294,7 @@ def test_comprobante_sin_cliente():
     """
     venta = FakeVenta()
     venta.cliente_nombre = None
-    venta.cliente_documento = None
+    venta.rucDni = None  # CORRECCIÓN 5: Ajuste de variable
 
     pdf_bytes = generar_comprobante_venta(venta)
     assert isinstance(pdf_bytes, bytes)
