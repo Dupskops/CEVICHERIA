@@ -16,8 +16,9 @@ from unittest.mock import MagicMock
 
 from app.main import app
 from app.database import get_db
-# CORRECCIÓN 1: Importación de los modelos consolidados
 from app.models.models import Venta, DetalleVenta
+from app.routers.usuarios import get_current_user  # Importación de la dependencia de seguridad
+
 from app.services.report_service import (
     generar_comprobante_venta,
     generar_ticket_comanda,
@@ -34,19 +35,17 @@ class FakeVenta:
         self.id = 1
         self.numero = "VENTA-20260922-001"
         
-        # CORRECCIÓN 2: Separar fecha y hora para coincidir con la BD
         self.fecha = datetime(2026, 9, 22).date()
         self.hora = datetime(2026, 9, 22, 14, 30).time()
         
         self.cliente_nombre = "Carlos Méndez"
-        self.rucDni = "45123678"  # CORRECCIÓN 3: Ajuste de nombre de variable
+        self.rucDni = "45123678"
         self.subtotal = Decimal("68.00")
         self.igv = Decimal("12.24")
         self.total = Decimal("80.24")
         self.estado = "pagada"
         self.observaciones = None
         
-        # CORRECCIÓN 4: Simular la relación del Platillo para el nombre
         p1 = MagicMock(); p1.nombre = "Ceviche Clásico"
         p2 = MagicMock(); p2.nombre = "Leche de Tigre"
         p3 = MagicMock(); p3.nombre = "Chicharrón de Pescado"
@@ -87,7 +86,6 @@ def test_comprobante_pdf_es_valido():
 
     assert isinstance(pdf_bytes, bytes)
     assert len(pdf_bytes) > 0
-    # Un PDF válido comienza con %PDF
     assert pdf_bytes[:5] == b"%PDF-"
     print(f"\n📋 Comprobante generado: {len(pdf_bytes)} bytes")
 
@@ -213,6 +211,11 @@ def _override_db_none():
     return _get_db
 
 
+def _override_get_current_user():
+    """Simula un usuario logueado con token válido para pruebas protegidas."""
+    return {"idUsuario": 1, "usuario": "admin_test", "rol": "admin"}
+
+
 # ============================================================
 # Test 5: Endpoint comprobante — HTTP 200 + PDF
 # ============================================================
@@ -224,6 +227,7 @@ async def test_endpoint_comprobante():
     Verifica que retorna HTTP 200 con Content-Type application/pdf.
     """
     app.dependency_overrides[get_db] = _override_db(_mock_venta_ejemplo())
+    app.dependency_overrides[get_current_user] = _override_get_current_user  # Inyección JWT
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -248,6 +252,7 @@ async def test_endpoint_ticket():
     Verifica que retorna HTTP 200 con Content-Type application/pdf.
     """
     app.dependency_overrides[get_db] = _override_db(_mock_venta_ejemplo())
+    app.dependency_overrides[get_current_user] = _override_get_current_user  # Inyección JWT
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -272,6 +277,7 @@ async def test_endpoint_venta_no_existe():
     Verifica que retorna HTTP 404 cuando la venta no existe.
     """
     app.dependency_overrides[get_db] = _override_db_none()
+    app.dependency_overrides[get_current_user] = _override_get_current_user  # Inyección JWT
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -294,7 +300,7 @@ def test_comprobante_sin_cliente():
     """
     venta = FakeVenta()
     venta.cliente_nombre = None
-    venta.rucDni = None  # CORRECCIÓN 5: Ajuste de variable
+    venta.rucDni = None
 
     pdf_bytes = generar_comprobante_venta(venta)
     assert isinstance(pdf_bytes, bytes)
