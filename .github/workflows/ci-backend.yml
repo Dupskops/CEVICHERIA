@@ -18,6 +18,22 @@ on:
 jobs:
   test-backend:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: cevicheria_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     defaults:
       run:
         working-directory: backend
@@ -45,4 +61,6 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run pytest
+        env:
+          DATABASE_URL: "postgresql+psycopg://user:password@localhost:5432/cevicheria_db"
         run: python -m pytest tests/ -v --tb=short
