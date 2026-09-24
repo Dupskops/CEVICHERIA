@@ -1,3 +1,3 @@
-from app.models.venta import Venta, VentaDetalle
+from app.models.models import Venta, DetalleVenta
 
-__all__ = ["Venta", "VentaDetalle"]
+__all__ = ["Venta", "DetalleVenta"]
