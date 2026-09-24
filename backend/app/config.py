@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     DEBUG: bool = True
 
     # --- Base de Datos (PostgreSQL / Supabase) ---
-    DATABASE_URL: str = "postgresql://user:password@localhost:5432/cevicheria_db"
+    DATABASE_URL: str = "postgresql+psycopg://user:password@localhost:5432/cevicheria_db"
 
     # --- Google Gemini API ---
     GEMINI_API_KEY: str = ""
