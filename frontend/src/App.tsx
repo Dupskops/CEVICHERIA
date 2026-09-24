@@ -1,77 +1,49 @@
-/**
- * App.tsx — Componente raíz de la aplicación.
- * Integra el widget de chatbot de la Cevichería D'Peñas.
- */
-
+import { useEffect, useMemo, useState } from "react";
+import type { FormEvent } from "react";
 import ChatWidget from "./components/chatbot/ChatWidget";
+import { createDish, createUser, deleteDish, deleteUser, getCurrentUser, listDishes, listUsers, login, updateDish, updateUser } from "./services/managementApi";
+import type { AuthUser, DishPayload, DishRecord, UserPayload, UserRecord, UserRole } from "./types/management";
 
-function App() {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-sky-50 to-cyan-50">
-      {/* ===== Página de demostración ===== */}
-      <div className="max-w-4xl mx-auto px-6 py-16">
-        {/* Hero */}
-        <header className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-sky-100 text-sky-700 rounded-full text-sm font-medium mb-6">
-            <span>🐟</span>
-            <span>Sistema de Gestión Administrativa</span>
-          </div>
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-sky-700 via-cyan-600 to-teal-600 bg-clip-text text-transparent mb-4">
-            Cevichería D'Peñas
-          </h1>
-          <p className="text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">
-            Plataforma de gestión para la cevichería más deliciosa de Talara, Piura.
-            Gestiona reservas, platillos, ventas y mucho más.
-          </p>
-        </header>
+type Module = "overview" | "users" | "dishes";
+const blankDish: DishPayload = { name: "", description: "", price: 0, category: "Ceviches", image_url: "", available: true };
+const blankUser: UserPayload = { name: "", email: "", password: "", role: "employee", phone: "", active: true };
 
-        {/* Cards de módulos */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
-          {[
-            {
-              icon: "📋",
-              title: "Reservas",
-              desc: "Gestiona la disponibilidad de mesas en tiempo real.",
-            },
-            {
-              icon: "🍽️",
-              title: "Platillos",
-              desc: "Catálogo completo de nuestra carta marina.",
-            },
-            {
-              icon: "💰",
-              title: "Ventas",
-              desc: "Control y registro de ventas del día.",
-            },
-          ].map((card) => (
-            <div
-              key={card.title}
-              className="group p-6 bg-white/70 backdrop-blur-sm rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-lg hover:shadow-sky-500/5 hover:-translate-y-1 transition-all duration-300"
-            >
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-sky-100 to-cyan-100 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">
-                {card.icon}
-              </div>
-              <h3 className="font-semibold text-slate-800 mb-2">
-                {card.title}
-              </h3>
-              <p className="text-sm text-slate-500">{card.desc}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Indicador del chatbot */}
-        <div className="text-center">
-          <p className="text-sm text-slate-400">
-            💬 Haz clic en el botón de chat en la esquina inferior derecha para
-            hablar con nuestro asistente IA
-          </p>
-        </div>
-      </div>
-
-      {/* ===== Widget del Chatbot ===== */}
-      <ChatWidget />
-    </div>
-  );
+function Icon({ name }: { name: string }) {
+  const paths: Record<string, string> = { grid: "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z", users: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75", dish: "M3 10h18M5 10v9h14v-9M7 10V7a5 5 0 0 1 10 0v3M9 19v2m6-2v2", logout: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9", plus: "M12 5v14M5 12h14", edit: "M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z", trash: "M3 6h18M8 6V4h8v2m-9 0 1 15h8l1-15M10 10v7m4-7v7", close: "M6 6l12 12M18 6 6 18", menu: "M4 6h16M4 12h16M4 18h16" };
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={paths[name] || paths.grid} /></svg>;
 }
 
-export default App;
+function LoginScreen({ onLogin }: { onLogin: (user: AuthUser) => void }) {
+  const [email, setEmail] = useState(""); const [password, setPassword] = useState(""); const [loading, setLoading] = useState(false); const [error, setError] = useState("");
+  const submit = async (event: FormEvent) => { event.preventDefault(); setLoading(true); setError(""); try { const result = await login(email, password); localStorage.setItem("cevicheria_token", result.access_token); onLogin(result.user); } catch (cause) { setError(cause instanceof Error ? cause.message : "No se pudo iniciar sesión."); } finally { setLoading(false); } };
+  return <main className="login-shell"><div className="login-art"><div className="brand-mark">CP</div><p className="eyebrow">SABORES DEL PACÍFICO</p><h1>La cocina empieza<br /><em>con una buena marea.</em></h1><p className="login-copy">Administra tu cevichería con claridad, ritmo y el sabor de nuestra costa.</p><div className="wave-line" /></div><section className="login-panel"><div className="mobile-brand brand-mark">CP</div><p className="eyebrow">D'PEÑAS · PANEL ADMINISTRATIVO</p><h2>Bienvenido de vuelta</h2><p className="muted">Ingresa con tus credenciales para continuar.</p><form onSubmit={submit} className="form-stack"><label>Correo electrónico<input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="nombre@dpenas.pe" required /></label><label>Contraseña<input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required /></label>{error && <div className="alert error">{error}</div>}<button className="primary-button" disabled={loading}>{loading ? "Validando..." : "Ingresar"}</button></form><p className="login-foot">Acceso protegido · Cevichería D'Peñas</p></section></main>;
+}
+
+function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) { return <div className="modal-backdrop"><div className="modal"><div className="modal-head"><div><p className="eyebrow">GESTIÓN</p><h3>{title}</h3></div><button className="icon-button" onClick={onClose} aria-label="Cerrar"><Icon name="close" /></button></div>{children}</div></div>; }
+function Stat({ label, value, accent }: { label: string; value: number | string; accent: string }) { return <div className={`stat-card ${accent}`}><span>{label}</span><strong>{value}</strong><small>Actualizado ahora</small></div>; }
+function EmptyState({ label }: { label: string }) { return <div className="empty-state">{label}</div>; }
+function RowActions({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) { return <div className="row-actions"><button onClick={onEdit} aria-label="Editar"><Icon name="edit" /></button><button onClick={onDelete} aria-label="Eliminar"><Icon name="trash" /></button></div>; }
+
+function Toolbar({ title, description, query, setQuery, onCreate, action }: { title: string; description: string; query: string; setQuery: (value: string) => void; onCreate: () => void; action: string }) { return <div className="module-head"><div><p className="eyebrow">ADMINISTRACIÓN</p><h2>{title}</h2><p className="muted">{description}</p></div><button className="primary-button compact" onClick={onCreate}><Icon name="plus" />{action}</button><div className="search"><span>⌕</span><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Buscar..." /></div></div>; }
+
+function Overview({ user, users, dishes, onModule }: { user: AuthUser; users: UserRecord[]; dishes: DishRecord[]; onModule: (module: Module) => void }) { return <section className="content"><div className="welcome-banner"><div><p className="eyebrow">PANEL ADMINISTRATIVO</p><h2>Todo bajo control,<br /><em>sabor en cada detalle.</em></h2><p>Revisa el estado de tu operación y mantén tu carta siempre lista.</p></div><div className="banner-seal">✦<span>MAR<br />FRESCO</span></div></div><div className="stats-grid"><Stat label="Platillos activos" value={dishes.filter(item => item.available).length} accent="coral" /><Stat label="Total en carta" value={dishes.length} accent="aqua" /><Stat label={user.role === "admin" ? "Usuarios registrados" : "Tu rol"} value={user.role === "admin" ? users.length : "Equipo"} accent="yellow" /></div><div className="section-heading"><div><p className="eyebrow">ACCESOS RÁPIDOS</p><h2>Gestiona tu operación</h2></div></div><div className="quick-grid">{user.role === "admin" && <button onClick={() => onModule("users")}><span className="quick-icon coral"><Icon name="users" /></span><strong>Usuarios y permisos</strong><small>Administra el acceso de tu equipo →</small></button>}<button onClick={() => onModule("dishes")}><span className="quick-icon aqua"><Icon name="dish" /></span><strong>Catálogo de platillos</strong><small>Actualiza tu carta marina →</small></button></div></section>; }
+
+function UserModule({ users, query, setQuery, onCreate, onEdit, onDelete }: { users: UserRecord[]; query: string; setQuery: (value: string) => void; onCreate: () => void; onEdit: (item: UserRecord) => void; onDelete: (id: number | string) => void }) { return <section className="content"><Toolbar title="Usuarios" description="Gestiona los perfiles y permisos de tu equipo." query={query} setQuery={setQuery} onCreate={onCreate} action="Nuevo usuario" /><div className="table-wrap"><table><thead><tr><th>USUARIO</th><th>ROL</th><th>CONTACTO</th><th>ESTADO</th><th /></tr></thead><tbody>{users.map(item => <tr key={item.id}><td><div className="table-person"><div className="mini-avatar">{item.name.slice(0, 1)}</div><div><strong>{item.name}</strong><span>{item.email}</span></div></div></td><td><span className={`role-pill ${item.role}`}>{item.role === "admin" ? "Administrador" : "Empleado"}</span></td><td>{item.phone || "—"}</td><td><span className={`status-pill ${item.active ? "on" : "off"}`}><i />{item.active ? "Activo" : "Inactivo"}</span></td><td><RowActions onEdit={() => onEdit(item)} onDelete={() => onDelete(item.id)} /></td></tr>)}</tbody></table>{users.length === 0 && <EmptyState label="No hay usuarios para mostrar." />}</div></section>; }
+function DishModule({ dishes, query, setQuery, onCreate, onEdit, onDelete }: { dishes: DishRecord[]; query: string; setQuery: (value: string) => void; onCreate: () => void; onEdit: (item: DishRecord) => void; onDelete: (id: number | string) => void }) { return <section className="content"><Toolbar title="Platillos" description="Cuida cada detalle de la carta de D'Peñas." query={query} setQuery={setQuery} onCreate={onCreate} action="Nuevo platillo" /><div className="dish-grid">{dishes.map(item => <article className="dish-card" key={item.id}><div className="dish-image">{item.image_url ? <img src={item.image_url} alt={item.name} /> : <span>🐟</span>}<span className={`availability ${item.available ? "on" : "off"}`}>{item.available ? "Disponible" : "Agotado"}</span></div><div className="dish-info"><div><span className="category">{item.category}</span><h3>{item.name}</h3></div><strong className="price">S/ {Number(item.price).toFixed(2)}</strong></div><p>{item.description || "Sin descripción registrada."}</p><div className="dish-actions"><button onClick={() => onEdit(item)}><Icon name="edit" />Editar</button><button onClick={() => onDelete(item.id)}><Icon name="trash" />Eliminar</button></div></article>)}{dishes.length === 0 && <EmptyState label="No hay platillos para mostrar." />}</div></section>; }
+
+function UserModal({ initial, onClose, onSave }: { initial: UserRecord | null; onClose: () => void; onSave: (payload: UserPayload) => Promise<void> }) { const [form, setForm] = useState<UserPayload>(initial ? { name: initial.name, email: initial.email, role: initial.role, phone: initial.phone || "", active: initial.active } : { ...blankUser }); const [saving, setSaving] = useState(false); const submit = async (event: FormEvent) => { event.preventDefault(); setSaving(true); try { await onSave(form); } finally { setSaving(false); } }; return <Modal title={initial ? "Editar usuario" : "Nuevo usuario"} onClose={onClose}><form className="modal-form" onSubmit={submit}><label>Nombre completo<input required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></label><label>Correo electrónico<input required type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></label>{!initial && <label>Contraseña<input required type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} /></label>}<div className="form-row"><label>Rol<select value={form.role} onChange={e => setForm({ ...form, role: e.target.value as UserRole })}><option value="employee">Empleado</option><option value="admin">Administrador</option></select></label><label>Teléfono<input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} /></label></div><label className="checkbox"><input type="checkbox" checked={form.active} onChange={e => setForm({ ...form, active: e.target.checked })} /> Usuario activo</label><div className="modal-actions"><button type="button" className="secondary-button" onClick={onClose}>Cancelar</button><button className="primary-button" disabled={saving}>{saving ? "Guardando..." : "Guardar usuario"}</button></div></form></Modal>; }
+function DishModal({ initial, onClose, onSave }: { initial: DishRecord | null; onClose: () => void; onSave: (payload: DishPayload) => Promise<void> }) { const [form, setForm] = useState<DishPayload>(initial ? { name: initial.name, description: initial.description, price: initial.price, category: initial.category, image_url: initial.image_url || "", available: initial.available } : { ...blankDish }); const [saving, setSaving] = useState(false); const submit = async (event: FormEvent) => { event.preventDefault(); setSaving(true); try { await onSave(form); } finally { setSaving(false); } }; return <Modal title={initial ? "Editar platillo" : "Nuevo platillo"} onClose={onClose}><form className="modal-form" onSubmit={submit}><label>Nombre del platillo<input required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></label><div className="form-row"><label>Categoría<select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}><option>Ceviches</option><option>Mariscos</option><option>Arroces</option><option>Bebidas</option><option>Entradas</option></select></label><label>Precio (S/)<input required min="0" step="0.01" type="number" value={form.price} onChange={e => setForm({ ...form, price: Number(e.target.value) })} /></label></div><label>Descripción<textarea rows={3} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></label><label>URL de imagen<input type="url" value={form.image_url} onChange={e => setForm({ ...form, image_url: e.target.value })} placeholder="https://..." /></label><label className="checkbox"><input type="checkbox" checked={form.available} onChange={e => setForm({ ...form, available: e.target.checked })} /> Disponible en carta</label><div className="modal-actions"><button type="button" className="secondary-button" onClick={onClose}>Cancelar</button><button className="primary-button" disabled={saving}>{saving ? "Guardando..." : "Guardar platillo"}</button></div></form></Modal>; }
+
+export default function App() {
+  const [user, setUser] = useState<AuthUser | null>(null); const [module, setModule] = useState<Module>("overview"); const [users, setUsers] = useState<UserRecord[]>([]); const [dishes, setDishes] = useState<DishRecord[]>([]); const [query, setQuery] = useState(""); const [modal, setModal] = useState<"user" | "dish" | null>(null); const [editing, setEditing] = useState<UserRecord | DishRecord | null>(null); const [loading, setLoading] = useState(false); const [error, setError] = useState(""); const isAdmin = user?.role === "admin";
++  useEffect(() => { const token = localStorage.getItem("cevicheria_token"); if (token) getCurrentUser().then(setUser).catch(() => localStorage.removeItem("cevicheria_token")); }, []);
++  useEffect(() => { if (!user) return; setLoading(true); Promise.all([isAdmin ? listUsers() : Promise.resolve([]), listDishes()]).then(([nextUsers, nextDishes]) => { setUsers(nextUsers); setDishes(nextDishes); }).catch(cause => setError(cause instanceof Error ? cause.message : "No se pudieron cargar los datos.")).finally(() => setLoading(false)); }, [user, isAdmin]);
+  const filteredUsers = useMemo(() => users.filter(item => `${item.name} ${item.email}`.toLowerCase().includes(query.toLowerCase())), [users, query]); const filteredDishes = useMemo(() => dishes.filter(item => `${item.name} ${item.category}`.toLowerCase().includes(query.toLowerCase())), [dishes, query]);
+  if (!user) return <LoginScreen onLogin={setUser} />;
+  const remove = async (kind: "user" | "dish", id: number | string) => { if (!window.confirm("¿Confirmas que deseas eliminar este registro?")) return; try { if (kind === "user") { await deleteUser(id); setUsers(items => items.filter(item => item.id !== id)); } else { await deleteDish(id); setDishes(items => items.filter(item => item.id !== id)); } } catch (cause) { setError(cause instanceof Error ? cause.message : "No se pudo eliminar el registro."); } };
+  const saveUser = async (payload: UserPayload) => { const next = editing ? await updateUser(editing.id, payload) : await createUser(payload); setUsers(items => editing ? items.map(item => item.id === next.id ? next : item) : [next, ...items]); setModal(null); };
+  const saveDish = async (payload: DishPayload) => { const next = editing ? await updateDish(editing.id, payload) : await createDish(payload); setDishes(items => editing ? items.map(item => item.id === next.id ? next : item) : [next, ...items]); setModal(null); };
+  const logout = () => { localStorage.removeItem("cevicheria_token"); setUser(null); };
+  const open = (kind: "user" | "dish", item?: UserRecord | DishRecord) => { setEditing(item || null); setModal(kind); };
+  return <div className="app-shell"><aside className="sidebar"><div className="side-brand"><div className="brand-mark">CP</div><div><strong>D'Peñas</strong><span>Gestión marina</span></div></div><nav><p className="nav-label">MENÚ PRINCIPAL</p><button className={module === "overview" ? "active" : ""} onClick={() => setModule("overview")}><Icon name="grid" />Resumen</button>{isAdmin && <button className={module === "users" ? "active" : ""} onClick={() => setModule("users")}><Icon name="users" />Usuarios</button>}<button className={module === "dishes" ? "active" : ""} onClick={() => setModule("dishes")}><Icon name="dish" />Platillos</button></nav><div className="side-bottom"><div className="role-note"><span className="status-dot" />{isAdmin ? "Administrador" : "Empleado"}<small>Sesión activa</small></div><button className="logout-button" onClick={logout}><Icon name="logout" />Cerrar sesión</button></div></aside><main className="main-content"><header className="topbar"><button className="mobile-menu icon-button" aria-label="Menú"><Icon name="menu" /></button><div><h1>{module === "overview" ? <>Buenos días, <em>{user.name.split(" ")[0]}</em></> : module === "users" ? "Usuarios" : "Catálogo de platillos"}</h1></div><div className="top-user"><div className="avatar">{user.name.slice(0, 1).toUpperCase()}</div><div><strong>{user.name}</strong><span>{isAdmin ? "Administrador" : "Empleado"}</span></div></div></header>{error && <div className="alert error page-alert">{error}<button onClick={() => setError("")}><Icon name="close" /></button></div>}{loading ? <div className="loading-state">Cargando información...</div> : module === "overview" ? <Overview user={user} users={users} dishes={dishes} onModule={setModule} /> : module === "users" && isAdmin ? <UserModule users={filteredUsers} query={query} setQuery={setQuery} onCreate={() => open("user")} onEdit={item => open("user", item)} onDelete={id => remove("user", id)} /> : <DishModule dishes={filteredDishes} query={query} setQuery={setQuery} onCreate={() => open("dish")} onEdit={item => open("dish", item)} onDelete={id => remove("dish", id)} />}</main>{modal === "user" && <UserModal initial={editing as UserRecord | null} onClose={() => setModal(null)} onSave={saveUser} />}{modal === "dish" && <DishModal initial={editing as DishRecord | null} onClose={() => setModal(null)} onSave={saveDish} />}<ChatWidget /></div>;
+}
