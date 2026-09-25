@@ -24,12 +24,12 @@ class ReservaOut(ReservaBase):
     class Config:
         from_attributes = True
 
-@router.get("/", response_model=list[ReservaOut])
+@router.get("", response_model=list[ReservaOut])
 def listar_reservas(db: Session = Depends(get_db)):
     reservas = db.query(Reserva).all()
     return reservas
 
-@router.post("/", response_model=ReservaOut)
+@router.post("", response_model=ReservaOut)
 def crear_reserva(
     payload: ReservaBase,
     db: Session = Depends(get_db), 

@@ -136,7 +136,7 @@ export function useSales() {
       total: total,
       estado: "emitida",
       detalles: items.map(it => ({
-        Platillos_idPlatillo: parseInt(it.itemId),
+        Platillos_idPlatillo: parseInt(it.itemId) || 1,
         cantidad: it.quantity,
         precio_unitario: it.unitPrice,
         subtotal: it.subtotal

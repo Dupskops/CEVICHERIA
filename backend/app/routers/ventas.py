@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.services.auth import oauth2_scheme
-from app.models.models import Venta, DetalleVenta, Reserva
+from app.models.models import Venta, DetalleVenta, Reserva, Platillo
 from pydantic import BaseModel
 from datetime import datetime
 from decimal import Decimal
@@ -40,11 +40,11 @@ class VentaOut(BaseModel):
     class Config:
         from_attributes = True
 
-@router.get("/", response_model=list[VentaOut])
+@router.get("", response_model=list[VentaOut])
 def listar_ventas(db: Session = Depends(get_db)):
     return db.query(Venta).all()
 
-@router.post("/", response_model=VentaOut)
+@router.post("", response_model=VentaOut)
 def crear_venta(
     payload: VentaBase,
     db: Session = Depends(get_db), 
@@ -78,6 +78,14 @@ def crear_venta(
     db.refresh(nueva_venta)
     
     for det in payload.detalles:
+        # Asegurar que el platillo existe
+        platillo_existente = db.query(Platillo).filter(Platillo.idPlatillo == det.Platillos_idPlatillo).first()
+        if not platillo_existente:
+            dummy_plat = Platillo(idPlatillo=det.Platillos_idPlatillo, nombre="Platillo General", precio=det.precio_unitario)
+            db.add(dummy_plat)
+            db.commit()
+            db.refresh(dummy_plat)
+
         nuevo_det = DetalleVenta(
             Ventas_idVenta=nueva_venta.idVenta,
             Platillos_idPlatillo=det.Platillos_idPlatillo,
