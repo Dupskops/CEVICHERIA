@@ -62,6 +62,8 @@ class Venta(Base):
     cliente_nombre = Column(String(150), nullable=True)
     cliente_documento = Column(String(20), nullable=True)
     rucDni = Column(String(20), nullable=True)
+    modalidad = Column(String(50), nullable=True, default="dine-in")
+    metodo_pago = Column(String(50), nullable=True, default="efectivo")
     
     subtotal = Column(Numeric(10, 2), nullable=False, default=Decimal("0.00"))
     igv = Column(Numeric(10, 2), nullable=False, default=Decimal("0.00"))

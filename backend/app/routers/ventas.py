@@ -29,6 +29,8 @@ class VentaBase(BaseModel):
     estado: str = "emitida"
     observaciones: str | None = None
     Reservas_idReserva: int | None = None
+    modalidad: str | None = "dine-in"
+    metodo_pago: str | None = "efectivo"
     detalles: list[DetalleVentaBase]
 
 class VentaOut(BaseModel):
@@ -37,6 +39,10 @@ class VentaOut(BaseModel):
     fecha: datetime
     cliente_nombre: str | None
     total: Decimal
+    modalidad: str | None
+    metodo_pago: str | None
+    subtotal: Decimal
+    detalles: list[DetalleVentaBase] = []
     class Config:
         from_attributes = True
 
@@ -67,6 +73,8 @@ def crear_venta(
         cliente_nombre=payload.cliente_nombre,
         cliente_documento=payload.cliente_documento,
         rucDni=payload.rucDni,
+        modalidad=payload.modalidad,
+        metodo_pago=payload.metodo_pago,
         subtotal=Decimal(str(payload.subtotal)),
         igv=Decimal(str(payload.igv)),
         total=Decimal(str(payload.total)),

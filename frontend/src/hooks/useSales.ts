@@ -48,13 +48,19 @@ export function useSales() {
         const mapped: Sale[] = data.map((v: any) => ({
           id: v.idVenta.toString(),
           code: v.numero,
-          items: [], // En una app real completa traeríamos el detalle desde el GET
-          subtotal: 0,
+          items: v.detalles ? v.detalles.map((d: any) => ({
+             itemId: d.Platillos_idPlatillo.toString(),
+             name: `Platillo ${d.Platillos_idPlatillo}`, // Name will be generic unless we fetch from dishes, but sufficient for count
+             unitPrice: parseFloat(d.precio_unitario),
+             quantity: d.cantidad,
+             subtotal: parseFloat(d.subtotal)
+          })) : [],
+          subtotal: v.subtotal ? parseFloat(v.subtotal) : parseFloat(v.total),
           discount: 0,
           total: parseFloat(v.total),
-          paymentMethod: "efectivo",
+          paymentMethod: v.metodo_pago || "efectivo",
           customerName: v.cliente_nombre || "General",
-          orderType: "dine-in",
+          orderType: v.modalidad || "dine-in",
           saleDate: v.fecha
         }));
         // Sort por fecha DESC
@@ -135,6 +141,8 @@ export function useSales() {
       igv: subtotal * 0.18, // asumiendo 18% para llenar el campo
       total: total,
       estado: "emitida",
+      modalidad: orderType,
+      metodo_pago: paymentMethod,
       detalles: items.map(it => ({
         Platillos_idPlatillo: parseInt(it.itemId) || 1,
         cantidad: it.quantity,
