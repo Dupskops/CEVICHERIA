@@ -9,7 +9,6 @@ import { useMemo, useState, type FormEvent } from "react";
 import {
   CATEGORY_LABELS,
   MENU_CATEGORIES,
-  MENU_ITEMS,
   PAYMENT_LABELS,
   SALE_TYPE_LABELS,
 } from "../../data/menu";
@@ -23,6 +22,7 @@ import type {
 import { formatCurrency } from "../../utils/format";
 
 interface POSPanelProps {
+  menuItems: MenuItem[];
   cart: CartItem[];
   addToCart: (item: MenuItem) => void;
   updateQuantity: (itemId: string, quantity: number) => void;
@@ -47,6 +47,7 @@ const PAYMENT_METHODS: PaymentMethod[] = ["efectivo", "tarjeta", "yape"];
 const SALE_TYPES: SaleType[] = ["dine-in", "takeaway", "delivery"];
 
 export default function POSPanel({
+  menuItems,
   cart,
   addToCart,
   updateQuantity,
@@ -74,13 +75,13 @@ export default function POSPanel({
 
   const visibleItems = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return MENU_ITEMS.filter((item) => {
+    return menuItems.filter((item) => {
       const byCategory = category === "todos" || item.category === category;
       const bySearch =
         !q || item.name.toLowerCase().includes(q) || item.description.toLowerCase().includes(q);
       return byCategory && bySearch;
     });
-  }, [category, search]);
+  }, [category, search, menuItems]);
 
   const cartCount = cart.reduce((sum, c) => sum + c.quantity, 0);
 

@@ -6,6 +6,8 @@
 
 import { useEffect, useState } from "react";
 import { useSales } from "../../hooks/useSales";
+import { listDishes } from "../../services/managementApi";
+import type { MenuItem } from "../../types/sales";
 import POSPanel from "./POSPanel";
 import SalesDashboard from "./SalesDashboard";
 
@@ -38,12 +40,33 @@ export default function SalesModule() {
 
   const [tab, setTab] = useState<SalesTab>("pos");
   const [announcement, setAnnouncement] = useState("");
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
 
   useEffect(() => {
     if (!announcement) return;
     const t = setTimeout(() => setAnnouncement(""), 6000);
     return () => clearTimeout(t);
   }, [announcement]);
+
+  // Cargar platillos desde el backend
+  useEffect(() => {
+    listDishes().then((dishes) => {
+      setMenuItems(
+        dishes
+          .filter((d) => d.available)
+          .map((d) => ({
+            id: d.id.toString(),
+            name: d.name,
+            description: d.description,
+            price: d.price,
+            category: (["Entrantes", "Fondo", "Sopas", "Bebidas"].includes(d.category)
+              ? d.category
+              : "Fondo") as any,
+            emoji: "🍲",
+          }))
+      );
+    }).catch(console.error);
+  }, []);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
@@ -95,6 +118,7 @@ export default function SalesModule() {
 
       {tab === "pos" ? (
         <POSPanel
+          menuItems={menuItems}
           cart={cart}
           addToCart={addToCart}
           updateQuantity={updateQuantity}
