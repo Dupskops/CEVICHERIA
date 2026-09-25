@@ -38,6 +38,7 @@ class Platillo(Base):
     idPlatillo = Column(Integer, primary_key=True, index=True) 
     nombre = Column(String(100), nullable=False) 
     precio = Column(Float, nullable=False) 
+    emoji = Column(String(10), default="🍲")
 
     # Relación
     detalles = relationship("DetalleVenta", back_populates="platillo")

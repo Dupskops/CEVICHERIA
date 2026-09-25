@@ -26,6 +26,7 @@ export interface DishRecord {
   price: number;
   category: string;
   image_url?: string;
+  emoji?: string;
   available: boolean;
 }
 

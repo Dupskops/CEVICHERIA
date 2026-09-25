@@ -5,6 +5,8 @@ from app.services.auth import oauth2_scheme
 from app.models.models import Platillo
 from pydantic import BaseModel
 
+from app.services.gemini_service import gemini_service
+
 router = APIRouter(
     prefix="/api/platillos",
     tags=["Platillos"]
@@ -16,6 +18,7 @@ class DishBase(BaseModel):
     price: float
     category: str
     image_url: str | None = None
+    emoji: str | None = None
     available: bool
 
 class DishOut(DishBase):
@@ -35,17 +38,22 @@ def listar_platillos(db: Session = Depends(get_db)):
             "price": p.precio,
             "category": "Ceviches" if "Ceviche" in p.nombre else "Mariscos",
             "image_url": "",
+            "emoji": getattr(p, "emoji", "🍲"),
             "available": True
         })
     return result
 
 @router.post("/", response_model=DishOut)
-def crear_platillo(
+async def crear_platillo(
     payload: DishBase,
     db: Session = Depends(get_db), 
     token: str = Depends(oauth2_scheme)
 ):
-    nuevo = Platillo(nombre=payload.name, precio=payload.price)
+    generated_emoji = payload.emoji
+    if not generated_emoji:
+        generated_emoji = await gemini_service.generate_emoji_for_dish(payload.name)
+        
+    nuevo = Platillo(nombre=payload.name, precio=payload.price, emoji=generated_emoji)
     db.add(nuevo)
     db.commit()
     db.refresh(nuevo)
@@ -56,6 +64,7 @@ def crear_platillo(
         "price": nuevo.precio,
         "category": payload.category,
         "image_url": payload.image_url,
+        "emoji": nuevo.emoji,
         "available": payload.available
     }
 

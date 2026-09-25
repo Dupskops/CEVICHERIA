@@ -153,6 +153,20 @@ class GeminiService:
         """Retorna la cantidad de sesiones activas."""
         return len(self._sessions)
 
+    async def generate_emoji_for_dish(self, dish_name: str) -> str:
+        """
+        Usa Gemini para determinar un emoji adecuado para el nombre de un platillo.
+        """
+        prompt = f"Eres un clasificador de platillos. Devuelve ÚNICAMENTE un (1) emoji que represente mejor este platillo: '{dish_name}'. No escribas texto adicional, solo el emoji."
+        try:
+            response = await self.model.generate_content_async(prompt)
+            emoji = response.text.strip()
+            if len(emoji) > 0 and len(emoji) <= 10:
+                return emoji
+            return "🍲"
+        except Exception as e:
+            return "🍲"
+
 
 # Instancia singleton del servicio
 gemini_service = GeminiService()

@@ -62,7 +62,7 @@ export default function SalesModule() {
             category: (["Entrantes", "Fondo", "Sopas", "Bebidas"].includes(d.category)
               ? d.category
               : "Fondo") as any,
-            emoji: "🍲",
+            emoji: d.emoji || "🍲",
           }))
       );
     }).catch(console.error);
