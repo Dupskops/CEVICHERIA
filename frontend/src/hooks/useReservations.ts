@@ -56,13 +56,30 @@ function loadReservations(): Reservation[] {
 }
 
 export function useReservations() {
-  const [reservations, setReservations] = useState<Reservation[]>(loadReservations);
+  const [reservations, setReservations] = useState<Reservation[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(todayISO);
 
-  /** Persiste las reservas en cada cambio. */
+  // Cargar reservas desde el backend
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(reservations));
-  }, [reservations]);
+    import("../services/managementApi").then(({ listReservations }) => {
+      listReservations().then((data: any) => {
+        const mapped: Reservation[] = data.map((r: any) => ({
+          id: r.idReserva.toString(),
+          code: `RST-${r.idReserva}`,
+          customerName: r.nombre,
+          phone: "+51 999 999 999", // Mock
+          date: r.fecha,
+          time: r.hora,
+          guests: 2, // Mock (la BD no lo guardó en el modelo base que hicimos rápido)
+          tableId: "t1", // Mock
+          status: r.estado,
+          notes: r.descripcion,
+          createdAt: r.fecha
+        }));
+        setReservations(mapped);
+      }).catch(console.error);
+    });
+  }, []);
 
   /** Estado en tiempo real de una mesa para una fecha y hora. */
   const getTableStatus = useCallback(
@@ -124,7 +141,7 @@ export function useReservations() {
 
   /** Valida el formulario y crea la reserva. */
   const createReservation = useCallback(
-    (input: CreateReservationInput): CreateReservationResult => {
+    async (input: CreateReservationInput): Promise<CreateReservationResult> => {
       const table = TABLES.find((t) => t.id === input.tableId);
       if (!table) {
         return { ok: false, error: "Selecciona una mesa disponible." };
@@ -153,33 +170,54 @@ export function useReservations() {
         };
       }
 
-      const dailyNumber =
-        reservations.filter((r) => r.date === input.date).length + 1;
-      const reservation: Reservation = {
-        id: generateId("res"),
-        code: generateCode("RST", dailyNumber),
-        customerName: input.customerName.trim(),
-        phone: input.phone.trim(),
-        date: input.date,
-        time: input.time,
-        guests: input.guests,
-        tableId: input.tableId,
-        status: "confirmada" as ReservationStatus,
-        notes: input.notes?.trim() || undefined,
-        createdAt: new Date().toISOString(),
-      };
+      try {
+        const { createReservation: apiCreateRes } = await import("../services/managementApi");
+        const payload = {
+          nombre: input.customerName.trim(),
+          fecha: input.date,
+          hora: input.time,
+          descripcion: input.notes?.trim() || "",
+          estado: "confirmada",
+          Usuarios_idUsuario: 1 // Admin
+        };
+        const saved = await apiCreateRes(payload);
 
-      setReservations((prev) => [...prev, reservation]);
-      return { ok: true, reservation };
+        const reservation: Reservation = {
+          id: saved.idReserva.toString(),
+          code: `RST-${saved.idReserva}`,
+          customerName: saved.nombre,
+          phone: input.phone.trim(),
+          date: saved.fecha,
+          time: saved.hora,
+          guests: input.guests,
+          tableId: input.tableId,
+          status: "confirmada" as ReservationStatus,
+          notes: saved.descripcion,
+          createdAt: new Date().toISOString(),
+        };
+
+        setReservations((prev) => [...prev, reservation]);
+        return { ok: true, reservation };
+      } catch (error) {
+        console.error(error);
+        return { ok: false, error: "Error al registrar la reserva en la Base de Datos." };
+      }
     },
-    [getTableStatus, reservations]
+    [getTableStatus]
   );
 
   /** Cancela una reserva (se mantiene en el historial como cancelada). */
-  const cancelReservation = useCallback((id: string) => {
-    setReservations((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status: "cancelada" as const } : r))
-    );
+  const cancelReservation = useCallback(async (id: string) => {
+    try {
+      const { deleteReservation } = await import("../services/managementApi");
+      await deleteReservation(id);
+      setReservations((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, status: "cancelada" as const } : r))
+      );
+    } catch (error) {
+      console.error(error);
+      alert("No se pudo cancelar la reserva en la Base de Datos.");
+    }
   }, []);
 
   return {

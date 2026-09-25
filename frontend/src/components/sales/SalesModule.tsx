@@ -112,8 +112,8 @@ export default function SalesModule() {
           subtotal={subtotal}
           total={total}
           change={change}
-          registerSale={() => {
-            const sale = registerSale();
+          registerSale={async () => {
+            const sale = await registerSale();
             if (sale) {
               setAnnouncement(
                 `Venta ${sale.code} registrada correctamente por ${sale.total.toFixed(2)} soles.`

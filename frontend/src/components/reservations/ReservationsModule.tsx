@@ -49,8 +49,8 @@ export default function ReservationsModule() {
     return slot < nowRef.getTime();
   };
 
-  const handleSubmit = (input: CreateReservationInput) => {
-    const result = createReservation(input);
+  const handleSubmit = async (input: CreateReservationInput) => {
+    const result = await createReservation(input);
     if (result.ok) {
       setAnnouncement(
         `Reserva ${result.reservation!.code} confirmada: ${result.reservation!.customerName}, mesa ${result.reservation!.tableId} a las ${result.reservation!.time}.`

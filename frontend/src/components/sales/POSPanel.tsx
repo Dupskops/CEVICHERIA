@@ -40,7 +40,7 @@ interface POSPanelProps {
   subtotal: number;
   total: number;
   change: number;
-  registerSale: () => Sale | null;
+  registerSale: () => Promise<Sale | null>;
 }
 
 const PAYMENT_METHODS: PaymentMethod[] = ["efectivo", "tarjeta", "yape"];
@@ -84,9 +84,9 @@ export default function POSPanel({
 
   const cartCount = cart.reduce((sum, c) => sum + c.quantity, 0);
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (cart.length === 0 || total <= 0) return;
-    const sale = registerSale();
+    const sale = await registerSale();
     if (sale) {
       setNotice(
         `Venta ${sale.code} registrada por ${formatCurrency(sale.total)}. ${sale.paymentMethod === "efectivo" ? `Vuelto: ${formatCurrency(change)}.` : ""}`
@@ -94,9 +94,9 @@ export default function POSPanel({
     }
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    handleCheckout();
+    await handleCheckout();
   };
 
   return (

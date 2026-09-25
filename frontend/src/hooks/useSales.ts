@@ -32,7 +32,7 @@ function loadSales(): Sale[] {
 }
 
 export function useSales() {
-  const [sales, setSales] = useState<Sale[]>(loadSales);
+  const [sales, setSales] = useState<Sale[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [discount, setDiscount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("efectivo");
@@ -40,10 +40,28 @@ export function useSales() {
   const [orderType, setOrderType] = useState<SaleType>("dine-in");
   const [cashReceived, setCashReceived] = useState(0);
 
-  /** Persiste las ventas en cada cambio. */
+  // Cargar ventas reales
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(sales));
-  }, [sales]);
+    import("../services/managementApi").then(({ listSales }) => {
+      listSales().then((data: any) => {
+        // Mapear desde el backend a la interfaz de React
+        const mapped: Sale[] = data.map((v: any) => ({
+          id: v.idVenta.toString(),
+          code: v.numero,
+          items: [], // En una app real completa traeríamos el detalle desde el GET
+          subtotal: 0,
+          discount: 0,
+          total: parseFloat(v.total),
+          paymentMethod: "efectivo",
+          customerName: v.cliente_nombre || "General",
+          orderType: "dine-in",
+          saleDate: v.fecha
+        }));
+        // Sort por fecha DESC
+        setSales(mapped.sort((a,b) => new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime()));
+      }).catch(console.error);
+    });
+  }, []);
 
   /** Agrega un plato al carrito (incrementa cantidad si ya existe). */
   const addToCart = useCallback((item: MenuItem) => {
@@ -98,7 +116,7 @@ export function useSales() {
   );
 
   /** Registra la venta actual del carrito y la agrega al historial. */
-  const registerSale = useCallback((): Sale | null => {
+  const registerSale = useCallback(async (): Promise<Sale | null> => {
     if (cart.length === 0 || total <= 0) return null;
 
     const items: SaleItem[] = cart.map((c) => ({
@@ -108,23 +126,48 @@ export function useSales() {
       quantity: c.quantity,
       subtotal: c.item.price * c.quantity,
     }));
-
-    const sale: Sale = {
-      id: generateId("sale"),
-      code: generateCode("V", sales.length + 1),
-      items,
-      subtotal,
-      discount: Math.min(discount, subtotal),
-      total,
-      paymentMethod,
-      customerName: customerName.trim() || "Cliente general",
-      orderType,
-      saleDate: new Date().toISOString(),
+    
+    const payload = {
+      numero: generateCode("V", sales.length + 1),
+      cliente_nombre: customerName.trim() || "Cliente general",
+      cliente_documento: "",
+      subtotal: subtotal,
+      igv: subtotal * 0.18, // asumiendo 18% para llenar el campo
+      total: total,
+      estado: "emitida",
+      detalles: items.map(it => ({
+        Platillos_idPlatillo: parseInt(it.itemId),
+        cantidad: it.quantity,
+        precio_unitario: it.unitPrice,
+        subtotal: it.subtotal
+      }))
     };
+    
+    try {
+      const { createSale } = await import("../services/managementApi");
+      const saved = await createSale(payload);
+      
+      const sale: Sale = {
+        id: saved.idVenta.toString(),
+        code: saved.numero,
+        items,
+        subtotal,
+        discount: Math.min(discount, subtotal),
+        total,
+        paymentMethod,
+        customerName: saved.cliente_nombre || "Cliente general",
+        orderType,
+        saleDate: saved.fecha,
+      };
 
-    setSales((prev) => [sale, ...prev]);
-    clearCart();
-    return sale;
+      setSales((prev) => [sale, ...prev]);
+      clearCart();
+      return sale;
+    } catch (error) {
+      console.error("Error creating sale:", error);
+      alert("Hubo un error al registrar la venta en la Base de Datos.");
+      return null;
+    }
   }, [
     cart,
     subtotal,
@@ -138,8 +181,15 @@ export function useSales() {
   ]);
 
   /** Elimina una venta del historial. */
-  const deleteSale = useCallback((id: string) => {
-    setSales((prev) => prev.filter((s) => s.id !== id));
+  const deleteSale = useCallback(async (id: string) => {
+    try {
+      const { deleteSale: apiDeleteSale } = await import("../services/managementApi");
+      await apiDeleteSale(id);
+      setSales((prev) => prev.filter((s) => s.id !== id));
+    } catch (e) {
+      console.error(e);
+      alert("No se pudo eliminar la venta en la Base de Datos.");
+    }
   }, []);
 
   /** Indicadores para el panel de control. */

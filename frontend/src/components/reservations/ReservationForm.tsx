@@ -17,7 +17,7 @@ interface ReservationFormProps {
   date: string;
   time: string;
   table: TableInfo | null;
-  onSubmit: (input: CreateReservationInput) => CreateReservationResult;
+  onSubmit: (input: CreateReservationInput) => Promise<CreateReservationResult>;
   onClearSelection: () => void;
 }
 
@@ -37,7 +37,7 @@ export default function ReservationForm({
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{ name?: string; phone?: string; guests?: string }>({});
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -54,7 +54,7 @@ export default function ReservationForm({
       return;
     }
 
-    const result = onSubmit({
+    const result = await onSubmit({
       customerName: name,
       phone,
       date,
