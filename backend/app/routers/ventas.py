@@ -57,8 +57,8 @@ def crear_venta(
         if not dummy:
             dummy = Reserva(idReserva=1, Usuarios_idUsuario=1, nombre="Venta Directa", estado="completada")
             db.add(dummy)
-            db.commit()
-            db.refresh(dummy)
+            # Solo un flush para poder usar el ID sin commit completo
+            db.flush()
         reserva_id = 1
         
     nueva_venta = Venta(
@@ -74,18 +74,25 @@ def crear_venta(
         observaciones=payload.observaciones
     )
     db.add(nueva_venta)
-    db.commit()
-    db.refresh(nueva_venta)
+    db.flush() # Flush para obtener el idVenta
     
-    for det in payload.detalles:
-        # Asegurar que el platillo existe
-        platillo_existente = db.query(Platillo).filter(Platillo.idPlatillo == det.Platillos_idPlatillo).first()
-        if not platillo_existente:
-            dummy_plat = Platillo(idPlatillo=det.Platillos_idPlatillo, nombre="Platillo General", precio=det.precio_unitario)
-            db.add(dummy_plat)
-            db.commit()
-            db.refresh(dummy_plat)
+    # Procesar platillos en bloque para evitar Múltiples SELECTS y COMMITS
+    ids_platillos = list(set([det.Platillos_idPlatillo for det in payload.detalles]))
+    platillos_existentes = db.query(Platillo.idPlatillo).filter(Platillo.idPlatillo.in_(ids_platillos)).all()
+    existentes_set = {p[0] for p in platillos_existentes}
 
+    nuevos_platillos = []
+    for det in payload.detalles:
+        if det.Platillos_idPlatillo not in existentes_set:
+            nuevos_platillos.append(Platillo(idPlatillo=det.Platillos_idPlatillo, nombre="Platillo General", precio=det.precio_unitario))
+            existentes_set.add(det.Platillos_idPlatillo) # Evitar duplicados en el mismo payload
+            
+    if nuevos_platillos:
+        db.add_all(nuevos_platillos)
+        db.flush()
+
+    # Ahora sí agregar todos los detalles
+    for det in payload.detalles:
         nuevo_det = DetalleVenta(
             Ventas_idVenta=nueva_venta.idVenta,
             Platillos_idPlatillo=det.Platillos_idPlatillo,
@@ -94,7 +101,10 @@ def crear_venta(
             subtotal=Decimal(str(det.subtotal))
         )
         db.add(nuevo_det)
+        
+    # Un solo commit gigante al final = Ultra Rápido
     db.commit()
+    db.refresh(nueva_venta)
     
     return nueva_venta
 
