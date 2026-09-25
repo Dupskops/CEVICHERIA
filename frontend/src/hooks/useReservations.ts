@@ -33,15 +33,7 @@ function hashString(str: string): number {
   return Math.abs(hash);
 }
 
-/**
- * Simula mesas ocupadas por clientes presentes (sin reserva) de forma
- * determinista por fecha + hora + mesa. Representa la afluencia en tiempo real
- * hasta que el backend provea disponibilidad real.
- */
-function isSimulatedOccupied(dateISO: string, time: string, tableId: string): boolean {
-  const n = hashString(`${dateISO}|${time}|${tableId}`);
-  return n % 3 === 0;
-}
+
 
 /** Lee las reservas persistidas en localStorage. */
 function loadReservations(): Reservation[] {
@@ -67,11 +59,11 @@ export function useReservations() {
           id: r.idReserva.toString(),
           code: `RST-${r.idReserva}`,
           customerName: r.nombre,
-          phone: "+51 999 999 999", // Mock
+          phone: r.telefono || "",
           date: r.fecha,
           time: r.hora,
-          guests: 2, // Mock (la BD no lo guardó en el modelo base que hicimos rápido)
-          tableId: "t1", // Mock
+          guests: r.comensales || 2,
+          tableId: r.mesa_id || "t1",
           status: r.estado,
           notes: r.descripcion,
           createdAt: r.fecha
@@ -92,7 +84,6 @@ export function useReservations() {
           r.status === "confirmada"
       );
       if (booked) return "reservada";
-      if (isSimulatedOccupied(dateISO, time, tableId)) return "ocupada";
       return "disponible";
     },
     [reservations]
@@ -178,7 +169,10 @@ export function useReservations() {
           hora: input.time,
           descripcion: input.notes?.trim() || "",
           estado: "confirmada",
-          Usuarios_idUsuario: 1 // Admin
+          Usuarios_idUsuario: 1, // Admin
+          mesa_id: input.tableId,
+          telefono: input.phone.trim(),
+          comensales: input.guests
         };
         const saved = await apiCreateRes(payload);
 

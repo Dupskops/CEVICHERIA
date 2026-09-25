@@ -27,6 +27,9 @@ class Reserva(Base):
     hora = Column(Time) 
     descripcion = Column(String(255)) 
     estado = Column(String(20)) 
+    mesa_id = Column(String(20), nullable=True, default="t1")
+    telefono = Column(String(20), nullable=True)
+    comensales = Column(Integer, nullable=True, default=2)
 
     # Relaciones
     propietario = relationship("Usuario", back_populates="reservas")

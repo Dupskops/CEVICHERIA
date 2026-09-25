@@ -18,6 +18,9 @@ class ReservaBase(BaseModel):
     descripcion: str | None = None
     estado: str = "confirmada"
     Usuarios_idUsuario: int = 1 # Admin predeterminado
+    mesa_id: str | None = "t1"
+    telefono: str | None = None
+    comensales: int | None = 2
 
 class ReservaOut(ReservaBase):
     idReserva: int
@@ -41,7 +44,10 @@ def crear_reserva(
         fecha=payload.fecha,
         hora=payload.hora,
         descripcion=payload.descripcion,
-        estado=payload.estado
+        estado=payload.estado,
+        mesa_id=payload.mesa_id,
+        telefono=payload.telefono,
+        comensales=payload.comensales
     )
     db.add(nueva)
     db.commit()
