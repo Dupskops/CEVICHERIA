@@ -4,11 +4,17 @@
  * de la Cevichería D'Peñas, con navegación accesible.
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ChatWidget from "./components/chatbot/ChatWidget";
 import AppHeader, { type ModuleId } from "./components/layout/AppHeader";
 import ReservationsModule from "./components/reservations/ReservationsModule";
 import SalesModule from "./components/sales/SalesModule";
+
+import LoginScreen from "./components/auth/LoginScreen";
+import UsersModule from "./components/users/UsersModule";
+import DishesModule from "./components/dishes/DishesModule";
+import { getCurrentUser } from "./services/managementApi";
+import type { AuthUser } from "./types/management";
 
 function HomePage({ onNavigate }: { onNavigate: (module: ModuleId) => void }) {
   return (
@@ -38,10 +44,10 @@ function HomePage({ onNavigate }: { onNavigate: (module: ModuleId) => void }) {
             module: "reservas" as ModuleId,
           },
           {
-            icon: "🪑",
-            title: "Mesas",
-            desc: "15 mesas (2, 4 y 6 personas) distribuidas en el local.",
-            module: "reservas" as ModuleId,
+            icon: "🐟",
+            title: "Carta",
+            desc: "Mantén actualizado el catálogo de platillos.",
+            module: "platillos" as ModuleId,
           },
           {
             icon: "💰",
@@ -76,15 +82,36 @@ function HomePage({ onNavigate }: { onNavigate: (module: ModuleId) => void }) {
 
 function App() {
   const [module, setModule] = useState<ModuleId>("inicio");
+  const [user, setUser] = useState<AuthUser | null>(null);
+  
+  useEffect(() => {
+    const token = localStorage.getItem("cevicheria_token");
+    if (token) {
+      getCurrentUser()
+        .then(setUser)
+        .catch(() => localStorage.removeItem("cevicheria_token"));
+    }
+  }, []);
+  
+  const handleLogout = () => {
+    localStorage.removeItem("cevicheria_token");
+    setUser(null);
+  };
+
+  if (!user) {
+    return <LoginScreen onLogin={setUser} />;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-sky-50 to-cyan-50">
-      <AppHeader active={module} onNavigate={setModule} />
+      <AppHeader active={module} onNavigate={setModule} user={user} onLogout={handleLogout} />
 
       <main id="main-content">
         {module === "inicio" && <HomePage onNavigate={setModule} />}
         {module === "reservas" && <ReservationsModule />}
         {module === "ventas" && <SalesModule />}
+        {module === "usuarios" && user.role === "admin" && <UsersModule />}
+        {module === "platillos" && <DishesModule />}
       </main>
 
       {/* Widget del chatbot */}
