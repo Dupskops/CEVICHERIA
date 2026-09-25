@@ -34,7 +34,7 @@ def listar_platillos(db: Session = Depends(get_db)):
         result.append({
             "id": p.idPlatillo,
             "name": p.nombre,
-            "description": "Receta clásica" if not p.precio else "Descripción por defecto",
+            "description": getattr(p, "descripcion", None) or "Descripción por defecto",
             "price": p.precio,
             "category": "Ceviches" if "Ceviche" in p.nombre else "Mariscos",
             "image_url": "",
@@ -53,7 +53,7 @@ async def crear_platillo(
     if not generated_emoji:
         generated_emoji = await gemini_service.generate_emoji_for_dish(payload.name)
         
-    nuevo = Platillo(nombre=payload.name, precio=payload.price, emoji=generated_emoji)
+    nuevo = Platillo(nombre=payload.name, descripcion=payload.description, precio=payload.price, emoji=generated_emoji)
     db.add(nuevo)
     db.commit()
     db.refresh(nuevo)
@@ -65,6 +65,33 @@ async def crear_platillo(
         "category": payload.category,
         "image_url": payload.image_url,
         "emoji": nuevo.emoji,
+        "available": payload.available
+    }
+
+@router.put("/{id}", response_model=DishOut)
+def actualizar_platillo(id: int, payload: DishBase, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
+    platillo = db.query(Platillo).filter(Platillo.idPlatillo == id).first()
+    if not platillo:
+        raise HTTPException(status_code=404, detail="Platillo no encontrado")
+    
+    platillo.nombre = payload.name
+    platillo.descripcion = payload.description
+    platillo.precio = payload.price
+    
+    if payload.emoji:
+        platillo.emoji = payload.emoji
+        
+    db.commit()
+    db.refresh(platillo)
+    
+    return {
+        "id": platillo.idPlatillo,
+        "name": platillo.nombre,
+        "description": getattr(platillo, "descripcion", None) or "Descripción por defecto",
+        "price": platillo.precio,
+        "category": payload.category,
+        "image_url": payload.image_url,
+        "emoji": platillo.emoji,
         "available": payload.available
     }
 

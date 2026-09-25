@@ -37,6 +37,7 @@ class Platillo(Base):
 
     idPlatillo = Column(Integer, primary_key=True, index=True) 
     nombre = Column(String(100), nullable=False) 
+    descripcion = Column(String(255), nullable=True)
     precio = Column(Float, nullable=False) 
     emoji = Column(String(10), default="🍲")
 
