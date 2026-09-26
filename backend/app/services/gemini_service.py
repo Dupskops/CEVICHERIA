@@ -79,6 +79,12 @@ class GeminiService:
         self.model = genai.GenerativeModel(
             model_name=settings.GEMINI_MODEL,
             system_instruction=SYSTEM_PROMPT,
+            safety_settings={
+                genai.types.HarmCategory.HARM_CATEGORY_HATE_SPEECH: genai.types.HarmBlockThreshold.BLOCK_NONE,
+                genai.types.HarmCategory.HARM_CATEGORY_HARASSMENT: genai.types.HarmBlockThreshold.BLOCK_NONE,
+                genai.types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: genai.types.HarmBlockThreshold.BLOCK_NONE,
+                genai.types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: genai.types.HarmBlockThreshold.BLOCK_NONE,
+            }
         )
         # Almacén de sesiones de chat activas: {session_id: ChatSession}
         self._sessions: dict[str, genai.ChatSession] = {}
@@ -116,13 +122,14 @@ class GeminiService:
         sid, chat = self._get_or_create_session(session_id)
 
         try:
-            response = chat.send_message(message)
+            response = await chat.send_message_async(message)
             return {
                 "response": response.text,
                 "session_id": sid,
                 "timestamp": datetime.now().isoformat(),
             }
         except Exception as e:
+            print(f"Gemini API Error: {e}")
             return {
                 "response": (
                     "Lo siento, en este momento no puedo procesar tu consulta. "
