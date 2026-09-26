@@ -129,16 +129,27 @@ class GeminiService:
                 "timestamp": datetime.now().isoformat(),
             }
         except Exception as e:
-            print(f"Gemini API Error: {e}")
-            return {
-                "response": (
+            error_str = str(e)
+            print(f"Gemini API Error: {error_str}")
+            
+            # Detectar límite de cuota (Rate Limit) de la capa gratuita
+            if "429" in error_str or "exceeded your current quota" in error_str.lower():
+                user_msg = (
+                    "¡Uy! Has hecho muchas consultas muy rápido y mi servicio gratuito "
+                    "necesita un respiro. 🛑 Por favor, espera 30 segundos e intenta de nuevo."
+                )
+            else:
+                user_msg = (
                     "Lo siento, en este momento no puedo procesar tu consulta. "
                     "Por favor intenta de nuevo en unos momentos o contacta "
                     "directamente al restaurante al (073) 123-456."
-                ),
+                )
+
+            return {
+                "response": user_msg,
                 "session_id": sid,
                 "timestamp": datetime.now().isoformat(),
-                "error": str(e),
+                "error": error_str,
             }
 
     def reset_session(self, session_id: str) -> bool:
