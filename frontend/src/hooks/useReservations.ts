@@ -82,13 +82,15 @@ export function useReservations() {
   /** Estado en tiempo real de una mesa para una fecha y hora. */
   const getTableStatus = useCallback(
     (tableId: string, dateISO: string, time: string): TableStatus => {
-      const booked = reservations.some(
-        (r) =>
-          r.date === dateISO &&
-          r.time === time &&
-          r.tableId === tableId &&
-          r.status === "confirmada"
-      );
+      const slotTimeMs = new Date(`${dateISO}T${time}:00`).getTime();
+      const RESERVATION_DURATION_MS = 90 * 60 * 1000; // 1 hora y 30 minutos
+
+      const booked = reservations.some((r) => {
+        if (r.date !== dateISO || r.tableId !== tableId || r.status !== "confirmada") return false;
+        const resTimeMs = new Date(`${r.date}T${r.time}:00`).getTime();
+        return slotTimeMs >= resTimeMs && slotTimeMs < resTimeMs + RESERVATION_DURATION_MS;
+      });
+
       if (booked) return "reservada";
       return "disponible";
     },
@@ -156,14 +158,21 @@ export function useReservations() {
         return { ok: false, error: "No puedes reservar en una fecha u hora pasada." };
       }
 
-      const status = getTableStatus(input.tableId, input.date, input.time);
-      if (status !== "disponible") {
+      const newStartTime = start.getTime();
+      const RESERVATION_DURATION_MS = 90 * 60 * 1000;
+      const newEndTime = newStartTime + RESERVATION_DURATION_MS;
+
+      const hasOverlap = reservations.some((r) => {
+        if (r.date !== input.date || r.tableId !== input.tableId || r.status !== "confirmada") return false;
+        const resStart = new Date(`${r.date}T${r.time}:00`).getTime();
+        const resEnd = resStart + RESERVATION_DURATION_MS;
+        return newStartTime < resEnd && resStart < newEndTime;
+      });
+
+      if (hasOverlap) {
         return {
           ok: false,
-          error:
-            status === "reservada"
-              ? "Esa mesa ya fue reservada para ese horario."
-              : "Esa mesa está ocupada en ese horario. Elige otra mesa u otro horario.",
+          error: "La mesa ya tiene una reserva que se cruza con este horario (las reservas duran 1 hora y media).",
         };
       }
 
