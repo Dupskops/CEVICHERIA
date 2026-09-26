@@ -5,7 +5,13 @@ Expone los endpoints para interactuar con el asistente IA de la Cevichería D'Pe
 
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy.orm import Session
+from sqlalchemy import func
+from datetime import date
+
+from app.database import get_db
+from app.models.models import Platillo, Venta, Reserva
 
 from app.schemas.chatbot import (
     ChatHealthResponse,
@@ -24,6 +30,27 @@ router = APIRouter(
     },
 )
 
+def get_realtime_context(db: Session) -> str:
+    # 1. Platillos
+    platillos = db.query(Platillo).all()
+    lista_platillos = ", ".join([f"{p.nombre} (S/. {p.precio})" for p in platillos])
+    
+    # 2. Ventas
+    hoy = date.today()
+    ventas_hoy = db.query(Venta).filter(func.date(Venta.fecha) == hoy).all()
+    total_ingresos = sum([v.total for v in ventas_hoy])
+    cantidad_ventas = len(ventas_hoy)
+    
+    # 3. Reservas
+    reservas_hoy = db.query(Reserva).filter(func.date(Reserva.fecha) == hoy, Reserva.estado == 'confirmada').count()
+    
+    context = (
+        f"[INFO INTERNA BD: Platillos Carta: {lista_platillos}. "
+        f"Métricas hoy: {cantidad_ventas} ventas (Ingresos S/. {total_ingresos:.2f}), "
+        f"{reservas_hoy} reservas confirmadas.]"
+    )
+    return context
+
 
 @router.post(
     "",
@@ -31,15 +58,19 @@ router = APIRouter(
     summary="Enviar mensaje al chatbot",
     description="Envía un mensaje del usuario al asistente IA y recibe la respuesta generada.",
 )
-async def send_message(request: ChatRequest):
+async def send_message(request: ChatRequest, db: Session = Depends(get_db)):
     """
     Endpoint principal del chatbot.
 
-    Recibe un mensaje del usuario, lo procesa con Google Gemini
-    y retorna la respuesta del asistente.
+    Recibe un mensaje del usuario, le inyecta el contexto en tiempo real
+    de la base de datos y retorna la respuesta del asistente.
     """
+    # Construir el mensaje enriquecido con contexto RAG
+    db_context = get_realtime_context(db)
+    enriched_message = f"{request.message}\n\n{db_context}"
+
     result = await gemini_service.generate_response(
-        message=request.message,
+        message=enriched_message,
         session_id=request.session_id,
     )
 
