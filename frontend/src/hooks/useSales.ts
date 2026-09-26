@@ -158,10 +158,11 @@ export function useSales() {
 
       if (orderType === "dine-in" && selectedTableId) {
         const now = new Date();
+        const minutes = now.getMinutes() >= 30 ? 30 : 0;
         const resPayload = {
           nombre: customerName.trim() || "Venta Directa en Mesa",
           fecha: todayISO(),
-          hora: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
+          hora: `${String(now.getHours()).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`,
           descripcion: "Venta directa en módulo de ventas",
           estado: "confirmada",
           Usuarios_idUsuario: 1,
