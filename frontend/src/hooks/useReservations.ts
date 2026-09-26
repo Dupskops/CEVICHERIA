@@ -61,9 +61,9 @@ export function useReservations() {
           customerName: r.nombre,
           phone: r.telefono || "",
           date: r.fecha,
-          time: r.hora,
+          time: typeof r.hora === 'string' ? r.hora.slice(0, 5) : r.hora,
           guests: r.comensales || 2,
-          tableId: r.mesa_id || "t1",
+          tableId: (r.mesa_id === "t1" || !r.mesa_id) ? "M-01" : r.mesa_id,
           status: r.estado,
           notes: r.descripcion,
           createdAt: r.fecha
