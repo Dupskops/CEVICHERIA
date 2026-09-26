@@ -16,7 +16,38 @@ import DishesModule from "./components/dishes/DishesModule";
 import { getCurrentUser } from "./services/managementApi";
 import type { AuthUser } from "./types/management";
 
-function HomePage({ onNavigate }: { onNavigate: (module: ModuleId) => void }) {
+function HomePage({ onNavigate, user }: { onNavigate: (module: ModuleId) => void; user: AuthUser }) {
+  const cards = [
+    {
+      icon: "📋",
+      title: "Reservas",
+      desc: "Calendario y disponibilidad de mesas en tiempo real.",
+      module: "reservas" as ModuleId,
+    },
+    {
+      icon: "💰",
+      title: "Ventas",
+      desc: "Punto de venta y control de ingresos del día.",
+      module: "ventas" as ModuleId,
+    },
+    {
+      icon: "🐟",
+      title: "Platillos",
+      desc: "Mantén actualizado el catálogo de platillos.",
+      module: "platillos" as ModuleId,
+    },
+    ...(user.role === "admin"
+      ? [
+          {
+            icon: "👥",
+            title: "Usuarios",
+            desc: "Administración de usuarios y permisos del sistema.",
+            module: "usuarios" as ModuleId,
+          },
+        ]
+      : []),
+  ];
+
   return (
     <div className="max-w-4xl mx-auto px-6 py-16">
       {/* Hero */}
@@ -35,27 +66,8 @@ function HomePage({ onNavigate }: { onNavigate: (module: ModuleId) => void }) {
       </header>
 
       {/* Cards de módulos */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
-        {[
-          {
-            icon: "📋",
-            title: "Reservas",
-            desc: "Calendario y disponibilidad de mesas en tiempo real.",
-            module: "reservas" as ModuleId,
-          },
-          {
-            icon: "🐟",
-            title: "Carta",
-            desc: "Mantén actualizado el catálogo de platillos.",
-            module: "platillos" as ModuleId,
-          },
-          {
-            icon: "💰",
-            title: "Ventas",
-            desc: "Punto de venta y control de ingresos del día.",
-            module: "ventas" as ModuleId,
-          },
-        ].map((card) => (
+      <div className={`grid gap-6 mb-16 ${cards.length > 3 ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4' : 'grid-cols-1 md:grid-cols-3'}`}>
+        {cards.map((card) => (
           <button
             key={card.title}
             type="button"
@@ -107,7 +119,7 @@ function App() {
       <AppHeader active={module} onNavigate={setModule} user={user} onLogout={handleLogout} />
 
       <main id="main-content">
-        {module === "inicio" && <HomePage onNavigate={setModule} />}
+        {module === "inicio" && <HomePage onNavigate={setModule} user={user} />}
         {module === "reservas" && <ReservationsModule />}
         {module === "ventas" && <SalesModule />}
         {module === "usuarios" && user.role === "admin" && <UsersModule />}
