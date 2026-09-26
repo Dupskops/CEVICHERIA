@@ -12,6 +12,7 @@ import {
   PAYMENT_LABELS,
   SALE_TYPE_LABELS,
 } from "../../data/menu";
+import { TABLES } from "../../data/tables";
 import type {
   CartItem,
   MenuItem,
@@ -37,6 +38,8 @@ interface POSPanelProps {
   setOrderType: (v: SaleType) => void;
   cashReceived: number;
   setCashReceived: (v: number) => void;
+  selectedTableId: string;
+  setSelectedTableId: (v: string) => void;
   subtotal: number;
   total: number;
   change: number;
@@ -62,6 +65,8 @@ export default function POSPanel({
   setOrderType,
   cashReceived,
   setCashReceived,
+  selectedTableId,
+  setSelectedTableId,
   subtotal,
   total,
   change,
@@ -283,6 +288,27 @@ export default function POSPanel({
               ))}
             </div>
           </fieldset>
+
+          {/* Selección de Mesa */}
+          {orderType === "dine-in" && (
+            <div>
+              <label htmlFor="pos-table" className="block text-xs font-medium text-slate-600 mb-1">
+                Mesa asignada
+              </label>
+              <select
+                id="pos-table"
+                value={selectedTableId}
+                onChange={(e) => setSelectedTableId(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-400/50 focus:border-sky-400"
+              >
+                {TABLES.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    Mesa {t.number} ({t.area})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Cliente */}
           <div>

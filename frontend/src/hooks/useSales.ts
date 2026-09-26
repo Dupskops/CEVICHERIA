@@ -39,6 +39,7 @@ export function useSales() {
   const [customerName, setCustomerName] = useState("");
   const [orderType, setOrderType] = useState<SaleType>("dine-in");
   const [cashReceived, setCashReceived] = useState(0);
+  const [selectedTableId, setSelectedTableId] = useState<string>("M-01");
 
   // Cargar ventas reales
   useEffect(() => {
@@ -143,6 +144,7 @@ export function useSales() {
       estado: "emitida",
       modalidad: orderType,
       metodo_pago: paymentMethod,
+      Reservas_idReserva: null as number | null,
       detalles: items.map(it => ({
         Platillos_idPlatillo: parseInt(it.itemId) || 1,
         cantidad: it.quantity,
@@ -152,7 +154,28 @@ export function useSales() {
     };
     
     try {
-      const { createSale } = await import("../services/managementApi");
+      const { createSale, createReservation } = await import("../services/managementApi");
+
+      if (orderType === "dine-in" && selectedTableId) {
+        const now = new Date();
+        const resPayload = {
+          nombre: customerName.trim() || "Venta Directa en Mesa",
+          fecha: todayISO(),
+          hora: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
+          descripcion: "Venta directa en módulo de ventas",
+          estado: "confirmada",
+          Usuarios_idUsuario: 1,
+          mesa_id: selectedTableId,
+          telefono: "",
+          comensales: 1
+        };
+        try {
+          const newRes = await createReservation(resPayload);
+          payload.Reservas_idReserva = newRes.idReserva;
+        } catch (e) {
+          console.warn("Could not create table reservation automatically", e);
+        }
+      }
       const saved = await createSale(payload);
       
       const sale: Sale = {
@@ -244,6 +267,8 @@ export function useSales() {
     setOrderType,
     cashReceived,
     setCashReceived,
+    selectedTableId,
+    setSelectedTableId,
     subtotal,
     total,
     change,

@@ -27,6 +27,8 @@ export default function SalesModule() {
     setOrderType,
     cashReceived,
     setCashReceived,
+    selectedTableId,
+    setSelectedTableId,
     subtotal,
     total,
     change,
@@ -133,6 +135,8 @@ export default function SalesModule() {
           setOrderType={setOrderType}
           cashReceived={cashReceived}
           setCashReceived={setCashReceived}
+          selectedTableId={selectedTableId}
+          setSelectedTableId={setSelectedTableId}
           subtotal={subtotal}
           total={total}
           change={change}
