@@ -182,7 +182,7 @@ export function useReservations() {
           customerName: saved.nombre,
           phone: input.phone.trim(),
           date: saved.fecha,
-          time: saved.hora,
+          time: input.time,
           guests: input.guests,
           tableId: input.tableId,
           status: "confirmada" as ReservationStatus,
