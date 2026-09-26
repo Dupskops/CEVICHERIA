@@ -49,7 +49,13 @@ function loadReservations(): Reservation[] {
 
 export function useReservations() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
-  const [selectedDate, setSelectedDate] = useState<string>(todayISO);
+  const [selectedDate, setSelectedDate] = useState<string>(() => {
+    return sessionStorage.getItem("cevicheria.selectedDate") || todayISO();
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem("cevicheria.selectedDate", selectedDate);
+  }, [selectedDate]);
 
   // Cargar reservas desde el backend
   useEffect(() => {

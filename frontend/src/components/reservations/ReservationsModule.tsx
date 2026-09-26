@@ -26,7 +26,13 @@ export default function ReservationsModule() {
     cancelReservation,
   } = useReservations();
 
-  const [selectedTime, setSelectedTime] = useState<string>(TIME_SLOTS[0]);
+  const [selectedTime, setSelectedTime] = useState<string>(() => {
+    return sessionStorage.getItem("cevicheria.selectedTime") || TIME_SLOTS[0];
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem("cevicheria.selectedTime", selectedTime);
+  }, [selectedTime]);
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState("");
 
