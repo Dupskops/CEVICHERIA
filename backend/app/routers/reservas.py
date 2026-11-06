@@ -5,6 +5,23 @@ from app.services.auth import oauth2_scheme
 from app.models.models import Reserva
 from pydantic import BaseModel
 from datetime import date, time
+from jose import JWTError, jwt
+from app.services.auth import ALGORITHM, SECRET_KEY
+from app.models.models import Usuario
+
+
+def require_staff(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        # Compatibilidad con el login administrativo actual (usuarios.py).
+        if payload.get("sub") == "admin@dpenas.pe":
+            return payload
+        user = db.query(Usuario).filter(Usuario.usuario == payload.get("sub")).first()
+        if not user or user.rol not in ("admin", "empleado"):
+            raise HTTPException(403, "Acceso reservado al personal")
+        return user
+    except JWTError:
+        raise HTTPException(401, "Sesión inválida")
 
 router = APIRouter(
     prefix="/api/reservas",
@@ -53,6 +70,28 @@ def crear_reserva(
     db.commit()
     db.refresh(nueva)
     return nueva
+
+
+@router.post("/{id}/check-in", response_model=ReservaOut)
+def check_in(id: int, db: Session = Depends(get_db), staff=Depends(require_staff)):
+    return transition_reservation(db, id, "confirmada", "ocupada")
+
+
+@router.post("/{id}/check-out", response_model=ReservaOut)
+def check_out(id: int, db: Session = Depends(get_db), staff=Depends(require_staff)):
+    return transition_reservation(db, id, "ocupada", "completada")
+
+
+def transition_reservation(db: Session, id: int, source: str, target: str):
+    # La condición en UPDATE evita carreras con la revisión de inasistencias.
+    count = db.query(Reserva).filter(Reserva.idReserva == id, Reserva.estado == source).update(
+        {Reserva.estado: target}, synchronize_session=False
+    )
+    if not count:
+        db.rollback()
+        raise HTTPException(409, "La reserva cambió de estado. Actualiza el listado.")
+    db.commit()
+    return db.query(Reserva).filter(Reserva.idReserva == id).one()
 
 @router.delete("/{id}")
 def eliminar_reserva(id: int, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):

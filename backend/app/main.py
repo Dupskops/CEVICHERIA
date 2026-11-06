@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.routers import chatbot, reports, platillos, usuarios, reservas, ventas
+from app.routers import automation
 
 settings = get_settings()
 
@@ -47,6 +48,7 @@ app.include_router(platillos.router)
 app.include_router(usuarios.router)
 app.include_router(reservas.router)
 app.include_router(ventas.router)
+app.include_router(automation.router)
 
 
 # ============================================================

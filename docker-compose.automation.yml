@@ -1,0 +1,21 @@
+# Complemento local: docker compose -f docker-compose.yml -f docker-compose.automation.yml up -d --build
+services:
+  n8n:
+    image: n8nio/n8n:2.46.6
+    ports:
+      - "127.0.0.1:5678:5678"
+    environment:
+      GENERIC_TIMEZONE: America/Lima
+      TZ: America/Lima
+      N8N_SECURE_COOKIE: "false"
+      N8N_DIAGNOSTICS_ENABLED: "false"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./automation:/workflows:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  n8n_data:

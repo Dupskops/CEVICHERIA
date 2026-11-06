@@ -1,11 +1,8 @@
 import type { AuthUser, DishPayload, DishRecord, LoginResponse, UserPayload, UserRecord } from "../types/management";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
-const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API === "true"; // Disabled by default
 
 // Fallbacks simulados (en caso de fallar o usar mock explícito)
-const MOCK_USERS: UserRecord[] = [];
-const MOCK_DISHES: DishRecord[] = [];
 function mockDelay<T>(value: T): Promise<T> { return new Promise(resolve => window.setTimeout(() => resolve(value), 220)); }
 
 async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -68,6 +65,8 @@ export const updateDish = (id: number | string, payload: Partial<DishPayload>) =
 export const deleteDish = (id: number | string) => apiRequest<void>(`/api/platillos/${id}`, { method: "DELETE" });
 
 // === Reservas ===
+export const checkInReservation = (id: string) => apiRequest<any>(`/api/reservas/${id}/check-in`, { method: "POST" });
+export const checkOutReservation = (id: string) => apiRequest<any>(`/api/reservas/${id}/check-out`, { method: "POST" });
 export const listReservations = () => apiRequest<any[]>("/api/reservas");
 export const createReservation = (payload: any) => apiRequest<any>("/api/reservas", { method: "POST", body: JSON.stringify(payload) });
 export const deleteReservation = (id: number | string) => apiRequest<void>(`/api/reservas/${id}`, { method: "DELETE" });

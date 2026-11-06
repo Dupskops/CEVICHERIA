@@ -1,4 +1,5 @@
-import { useEffect, useState, useMemo, FormEvent } from "react";
+import type { FormEvent } from "react";
+import { useEffect, useState, useMemo } from "react";
 import type { DishRecord, DishPayload } from "../../types/management";
 import { listDishes, createDish, updateDish, deleteDish } from "../../services/managementApi";
 

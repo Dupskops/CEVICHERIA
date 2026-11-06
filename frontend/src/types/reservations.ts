@@ -14,7 +14,7 @@ export interface TableInfo {
 export type TableStatus = "disponible" | "reservada" | "ocupada";
 
 /** Estado de una reserva. */
-export type ReservationStatus = "confirmada" | "cancelada";
+export type ReservationStatus = "confirmada" | "cancelada" | "ocupada" | "completada" | "no_asistio";
 
 /** Reserva registrada en el sistema. */
 export interface Reservation {

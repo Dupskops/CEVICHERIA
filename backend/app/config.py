@@ -24,6 +24,7 @@ class Settings(BaseSettings):
 
     # --- Seguridad ---
     SECRET_KEY: str = ""
+    AUTOMATION_API_KEY: str = ""
 
     # --- CORS ---
     CORS_ORIGINS: list[str] = ["http://localhost:5173", "http://localhost:3000"]

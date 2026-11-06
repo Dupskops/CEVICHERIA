@@ -1,9 +1,4 @@
-/**
- * Hook personalizado del módulo de Reservas.
- * Gestiona el calendario, la disponibilidad "en tiempo real" de las mesas
- * (simulado con ocupación determinista por fecha/hora) y el CRUD de reservas,
- * con persistencia en localStorage.
- */
+/** Reservas persistidas en el backend; consulta de cambios cada 15 segundos. */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { TABLES, TOTAL_TABLES } from "../data/tables";
@@ -16,36 +11,9 @@ import type {
   TableStatus,
 } from "../types/reservations";
 import { todayISO } from "../utils/format";
-import { generateCode, generateId } from "../utils/id";
 
-const STORAGE_KEY = "cevicheria.reservations.v1";
 
-/** Hora de referencia para medir la ocupación diaria en el calendario. */
 const CALENDAR_REFERENCE_TIME = "20:00";
-
-/** Genera un hash determinista a partir de un string. */
-function hashString(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = (hash << 5) - hash + str.charCodeAt(i);
-    hash |= 0;
-  }
-  return Math.abs(hash);
-}
-
-
-
-/** Lee las reservas persistidas en localStorage. */
-function loadReservations(): Reservation[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as unknown;
-    return Array.isArray(parsed) ? (parsed as Reservation[]) : [];
-  } catch {
-    return [];
-  }
-}
 
 export function useReservations() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
@@ -59,7 +27,8 @@ export function useReservations() {
 
   // Cargar reservas desde el backend
   useEffect(() => {
-    import("../services/managementApi").then(({ listReservations }) => {
+    let active = true;
+    const refresh = () => import("../services/managementApi").then(({ listReservations }) => {
       listReservations().then((data: any) => {
         const mapped: Reservation[] = data.map((r: any) => ({
           id: r.idReserva.toString(),
@@ -74,9 +43,12 @@ export function useReservations() {
           notes: r.descripcion,
           createdAt: r.fecha
         }));
-        setReservations(mapped);
+        if (active) setReservations(mapped);
       }).catch(console.error);
     });
+    refresh();
+    const timer = window.setInterval(refresh, 15000);
+    return () => { active = false; window.clearInterval(timer); };
   }, []);
 
   /** Estado en tiempo real de una mesa para una fecha y hora. */
@@ -85,13 +57,13 @@ export function useReservations() {
       const slotTimeMs = new Date(`${dateISO}T${time}:00`).getTime();
       const RESERVATION_DURATION_MS = 90 * 60 * 1000; // 1 hora y 30 minutos
 
-      const booked = reservations.some((r) => {
-        if (r.date !== dateISO || r.tableId !== tableId || r.status !== "confirmada") return false;
+      const booked = reservations.find((r) => {
+        if (r.date !== dateISO || r.tableId !== tableId || !(["confirmada", "ocupada"].includes(r.status))) return false;
         const resTimeMs = new Date(`${r.date}T${r.time}:00`).getTime();
-        return slotTimeMs >= resTimeMs && slotTimeMs < resTimeMs + RESERVATION_DURATION_MS;
+        return slotTimeMs >= resTimeMs && (r.status === "ocupada" || slotTimeMs < resTimeMs + RESERVATION_DURATION_MS);
       });
 
-      if (booked) return "reservada";
+      if (booked) return booked.status === "ocupada" ? "ocupada" : "reservada";
       return "disponible";
     },
     [reservations]
@@ -102,7 +74,7 @@ export function useReservations() {
     (dateISO: string, time: string): number =>
       TABLES.filter((t) => getTableStatus(t.id, dateISO, time) === "disponible")
         .length,
-    [getTableStatus]
+    [reservations]
   );
 
   /** Cantidad de mesas disponibles que admiten un número de comensales. */
@@ -127,7 +99,7 @@ export function useReservations() {
   const getReservationsByDate = useCallback(
     (dateISO: string): Reservation[] =>
       reservations
-        .filter((r) => r.date === dateISO && r.status === "confirmada")
+        .filter((r) => r.date === dateISO)
         .sort((a, b) => a.time.localeCompare(b.time)),
     [reservations]
   );
@@ -163,9 +135,9 @@ export function useReservations() {
       const newEndTime = newStartTime + RESERVATION_DURATION_MS;
 
       const hasOverlap = reservations.some((r) => {
-        if (r.date !== input.date || r.tableId !== input.tableId || r.status !== "confirmada") return false;
+        if (r.date !== input.date || r.tableId !== input.tableId || !(["confirmada", "ocupada"].includes(r.status))) return false;
         const resStart = new Date(`${r.date}T${r.time}:00`).getTime();
-        const resEnd = resStart + RESERVATION_DURATION_MS;
+        const resEnd = r.status === "ocupada" ? Infinity : resStart + RESERVATION_DURATION_MS;
         return newStartTime < resEnd && resStart < newEndTime;
       });
 
@@ -212,7 +184,7 @@ export function useReservations() {
         return { ok: false, error: "Error al registrar la reserva en la Base de Datos." };
       }
     },
-    [getTableStatus]
+    [reservations]
   );
 
   /** Cancela una reserva (se mantiene en el historial como cancelada). */
@@ -229,7 +201,18 @@ export function useReservations() {
     }
   }, []);
 
+  const changeAttendance = useCallback(async (id: string, arrival: boolean) => {
+    try {
+      const { checkInReservation, checkOutReservation } = await import("../services/managementApi");
+      const saved = await (arrival ? checkInReservation(id) : checkOutReservation(id));
+      setReservations(prev => prev.map(r => r.id === id ? { ...r, status: saved.estado } : r));
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "No se pudo actualizar la reserva.");
+    }
+  }, []);
+
   return {
+    changeAttendance,
     reservations,
     selectedDate,
     setSelectedDate,

@@ -24,6 +24,7 @@ export default function ReservationsModule() {
     reservationsByDate,
     createReservation,
     cancelReservation,
+    changeAttendance,
   } = useReservations();
 
   const [selectedTime, setSelectedTime] = useState<string>(() => {
@@ -156,7 +157,7 @@ export default function ReservationsModule() {
                 Reservas del día ({availableCount}/{TABLES.length} mesas abiertas ahora)
               </h3>
             </div>
-            <ReservationList reservations={reservationsByDate} onCancel={handleCancel} />
+            <ReservationList reservations={reservationsByDate} onCancel={handleCancel} onAttendance={changeAttendance} />
           </section>
         </div>
 
@@ -171,7 +172,7 @@ export default function ReservationsModule() {
             onClearSelection={() => setSelectedTableId(null)}
           />
           <p className="mt-3 text-[11px] text-slate-400 text-center">
-            Los horarios reservados se bloquean en tiempo real y se guardan en este dispositivo.
+            Las reservas se guardan en el servidor. El listado se actualiza cada 15 segundos.
           </p>
         </aside>
       </div>

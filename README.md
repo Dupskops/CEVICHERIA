@@ -1,5 +1,7 @@
 # Sistema de Gestión Administrativa - Cevichería D'Peñas
 
+La automatización de inasistencias con FastAPI y n8n se documenta en [automation/README.md](automation/README.md).
+
 Sistema web integral desarrollado para optimizar la gestión de reservas, ventas y catálogo de platillos de la Cevichería D'Peñas (Talara, Piura). El sistema cuenta con un panel administrativo completo y un asistente virtual basado en Inteligencia Artificial.
 
 ## Arquitectura y Tecnologías

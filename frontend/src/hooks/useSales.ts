@@ -15,21 +15,7 @@ import type {
   SaleType,
 } from "../types/sales";
 import { todayISO } from "../utils/format";
-import { generateCode, generateId } from "../utils/id";
-
-const STORAGE_KEY = "cevicheria.sales.v1";
-
-/** Lee las ventas persistidas en localStorage. */
-function loadSales(): Sale[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as unknown;
-    return Array.isArray(parsed) ? (parsed as Sale[]) : [];
-  } catch {
-    return [];
-  }
-}
+import { generateCode } from "../utils/id";
 
 export function useSales() {
   const [sales, setSales] = useState<Sale[]>([]);

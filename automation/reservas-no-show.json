@@ -1,0 +1,33 @@
+{
+  "name": "D'Peñas - Liberar reservas por inasistencia",
+  "active": false,
+  "settings": { "executionOrder": "v1", "timezone": "America/Lima" },
+  "nodes": [
+    {
+      "id": "cada-minuto",
+      "name": "Cada minuto",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0],
+      "parameters": { "rule": { "interval": [{ "field": "minutes", "minutesInterval": 1 }] } }
+    },
+    {
+      "id": "liberar",
+      "name": "Liberar reservas vencidas",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [300, 0],
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/api/automation/reservas/no-show",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": { "timeout": 30000 }
+      }
+    }
+  ],
+  "connections": {
+    "Cada minuto": { "main": [[{ "node": "Liberar reservas vencidas", "type": "main", "index": 0 }]] }
+  },
+  "pinData": {}
+}

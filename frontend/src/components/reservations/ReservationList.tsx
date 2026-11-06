@@ -10,11 +10,13 @@ import { timeTo12h } from "../../utils/format";
 interface ReservationListProps {
   reservations: Reservation[];
   onCancel: (id: string) => void;
+  onAttendance: (id: string, arrival: boolean) => void;
 }
 
 export default function ReservationList({
   reservations,
   onCancel,
+  onAttendance,
 }: ReservationListProps) {
   if (reservations.length === 0) {
     return (
@@ -48,11 +50,23 @@ export default function ReservationList({
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
+                <span className="text-xs text-slate-600">{r.status === "no_asistio" ? "No asistió" : r.status}</span>
+                {r.status === "confirmada" && (
+                  <button type="button" onClick={() => onAttendance(r.id, true)} className="text-xs text-sky-700 underline">
+                    Registrar llegada
+                  </button>
+                )}
+                {r.status === "ocupada" && (
+                  <button type="button" onClick={() => onAttendance(r.id, false)} className="text-xs text-sky-700 underline">
+                    Finalizar atención
+                  </button>
+                )}
                 <span className="px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-semibold">
                   {r.code}
                 </span>
                 <button
                   type="button"
+                  hidden={r.status !== "confirmada"}
                   onClick={() => {
                     if (
                       window.confirm(

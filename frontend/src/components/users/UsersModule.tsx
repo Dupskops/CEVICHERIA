@@ -1,4 +1,5 @@
-import { useEffect, useState, useMemo, FormEvent } from "react";
+import type { FormEvent } from "react";
+import { useEffect, useState, useMemo } from "react";
 import type { UserRecord, UserPayload, UserRole } from "../../types/management";
 import { listUsers, createUser, updateUser, deleteUser } from "../../services/managementApi";
 

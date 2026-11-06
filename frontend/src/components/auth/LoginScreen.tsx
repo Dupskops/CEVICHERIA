@@ -1,4 +1,5 @@
-import { FormEvent, useState } from "react";
+import type { FormEvent } from "react";
+import { useState } from "react";
 import type { AuthUser } from "../../types/management";
 import { login } from "../../services/managementApi";
 
